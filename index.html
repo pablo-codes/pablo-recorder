@@ -1,0 +1,2632 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Professional Web Screen Recorder</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root[data-theme="light"] {
+        --bg-gradient: radial-gradient(
+          circle at 10% 20%,
+          rgba(242, 235, 243, 1) 0%,
+          rgba(227, 240, 248, 1) 90%
+        );
+        --bg-blob-1: rgba(99, 102, 241, 0.15);
+        --bg-blob-2: rgba(236, 72, 153, 0.15);
+        --panel-bg: rgba(255, 255, 255, 0.45);
+        --panel-border: rgba(255, 255, 255, 0.6);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --accent: #4f46e5;
+        --accent-hover: #4338ca;
+        --accent-glow: rgba(79, 70, 229, 0.2);
+        --accent-secondary: #06b6d4;
+        --success: #10b981;
+        --success-glow: rgba(16, 185, 129, 0.2);
+        --danger: #ef4444;
+        --danger-glow: rgba(239, 68, 68, 0.2);
+        --warning: #f59e0b;
+        --shadow-sm:
+          0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        --shadow-md:
+          0 10px 15px -3px rgba(0, 0, 0, 0.05),
+          0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        --shadow-lg:
+          0 20px 25px -5px rgba(0, 0, 0, 0.05),
+          0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+        --slider-track: #e2e8f0;
+        --card-item-bg: rgba(255, 255, 255, 0.6);
+        --card-item-hover: rgba(255, 255, 255, 0.9);
+        --visualizer-bg: rgba(248, 250, 252, 0.6);
+        --visualizer-wave: #4f46e5;
+        --badge-bg: rgba(79, 70, 229, 0.1);
+        --badge-text: #4f46e5;
+      }
+
+      :root[data-theme="dark"] {
+        --bg-gradient: radial-gradient(
+          circle at 10% 20%,
+          rgba(15, 23, 42, 1) 0%,
+          rgba(9, 11, 28, 1) 90%
+        );
+        --bg-blob-1: rgba(99, 102, 241, 0.12);
+        --bg-blob-2: rgba(236, 72, 153, 0.1);
+        --panel-bg: rgba(15, 23, 42, 0.55);
+        --panel-border: rgba(255, 255, 255, 0.06);
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --accent: #6366f1;
+        --accent-hover: #4f46e5;
+        --accent-glow: rgba(99, 102, 241, 0.35);
+        --accent-secondary: #06b6d4;
+        --success: #10b981;
+        --success-glow: rgba(16, 185, 129, 0.3);
+        --danger: #ef4444;
+        --danger-glow: rgba(239, 68, 68, 0.3);
+        --warning: #f59e0b;
+        --shadow-sm:
+          0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+        --shadow-md:
+          0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+        --shadow-lg:
+          0 20px 25px -5px rgba(0, 0, 0, 0.4),
+          0 8px 10px -6px rgba(0, 0, 0, 0.4);
+        --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        --slider-track: #334155;
+        --card-item-bg: rgba(30, 41, 59, 0.4);
+        --card-item-hover: rgba(30, 41, 59, 0.7);
+        --visualizer-bg: rgba(15, 23, 42, 0.7);
+        --visualizer-wave: #6366f1;
+        --badge-bg: rgba(99, 102, 241, 0.15);
+        --badge-text: #818cf8;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        transition:
+          background-color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--bg-gradient);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow-x: hidden;
+        position: relative;
+        padding: 2rem 1rem;
+      }
+
+      /* Animated background blobs */
+      .bg-blobs {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: -1;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(100px);
+        animation: float 20s infinite alternate;
+      }
+
+      .blob-1 {
+        width: 400px;
+        height: 400px;
+        background: var(--bg-blob-1);
+        top: -10%;
+        left: -10%;
+      }
+
+      .blob-2 {
+        width: 500px;
+        height: 500px;
+        background: var(--bg-blob-2);
+        bottom: -15%;
+        right: -10%;
+        animation-delay: -5s;
+      }
+
+      @keyframes float {
+        0% {
+          transform: translate(0, 0) scale(1);
+        }
+        100% {
+          transform: translate(50px, 50px) scale(1.1);
+        }
+      }
+
+      /* Container */
+      .app-container {
+        width: 100%;
+        max-width: 1040px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        z-index: 10;
+      }
+
+      /* Header styling */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+      }
+
+      .logo {
+        font-family: "Outfit", sans-serif;
+        font-size: 1.75rem;
+        font-weight: 800;
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent-secondary) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .logo-icon {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        background-color: var(--accent);
+        border-radius: 50%;
+        box-shadow: 0 0 12px var(--accent);
+        animation: pulse 2s infinite;
+      }
+
+      /* Theme Switcher */
+      .theme-btn {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        color: var(--text-primary);
+        cursor: pointer;
+        padding: 0.6rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-sm);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition:
+          transform 0.2s ease,
+          background-color 0.2s;
+      }
+
+      .theme-btn:hover {
+        transform: scale(1.1);
+        background: var(--card-item-hover);
+      }
+
+      .theme-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      /* Main Glass Dashboard */
+      .dashboard {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        box-shadow: var(--shadow-glass);
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 2rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      @media (max-width: 868px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+          padding: 1.5rem;
+          gap: 1.5rem;
+        }
+      }
+
+      /* Sections & Panels */
+      .panel-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .panel-title {
+        font-family: "Outfit", sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      /* Card Grid (Settings) */
+      .settings-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      @media (min-width: 550px) and (max-width: 868px) {
+        .settings-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .setting-card {
+        background: var(--card-item-bg);
+        border: 1px solid var(--panel-border);
+        padding: 1.2rem;
+        border-radius: 16px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        transition:
+          transform 0.2s ease,
+          background-color 0.2s;
+      }
+
+      .setting-card:hover {
+        background: var(--card-item-hover);
+        transform: translateY(-2px);
+      }
+
+      .setting-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .setting-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .setting-description {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: -0.25rem;
+      }
+
+      /* Dropdowns */
+      select {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        color: var(--text-primary);
+        font-family: "Inter", sans-serif;
+        font-size: 0.85rem;
+        font-weight: 500;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        outline: none;
+        cursor: pointer;
+        width: 100%;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+        padding-right: 30px;
+      }
+
+      select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+      }
+
+      select:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      /* Toggle Switches */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .switch input:disabled + .slider-switch {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .slider-switch {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--slider-track);
+        transition: 0.3s;
+        border-radius: 24px;
+      }
+
+      .slider-switch:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+
+      input:checked + .slider-switch {
+        background-color: var(--accent);
+      }
+
+      input:checked + .slider-switch:before {
+        transform: translateX(20px);
+      }
+
+      /* Filter sliders block */
+      .filters-collapsible {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        margin-top: 0.25rem;
+        border-top: 1px dashed var(--panel-border);
+        padding-top: 0.85rem;
+      }
+
+      .filter-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .filter-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .filter-val {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--slider-track);
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        box-shadow: 0 0 6px var(--accent-glow);
+        transition: transform 0.1s;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+      }
+
+      input[type="range"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Visualizer and Status Display Panel */
+      .display-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        justify-content: space-between;
+        background: var(--card-item-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        min-height: 380px;
+      }
+
+      .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: var(--badge-bg);
+        border-radius: 99px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--badge-text);
+        letter-spacing: 0.2px;
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--accent);
+      }
+
+      .status-indicator.recording {
+        background-color: var(--danger);
+        box-shadow: 0 0 8px var(--danger);
+        animation: pulse-danger 1.5s infinite;
+      }
+
+      .status-indicator.paused {
+        background-color: var(--warning);
+        box-shadow: 0 0 8px var(--warning);
+      }
+
+      @keyframes pulse-danger {
+        0% {
+          transform: scale(0.9);
+          opacity: 0.6;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.9);
+          opacity: 0.6;
+        }
+      }
+
+      /* Timer */
+      .timer-display {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 2.75rem;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: -1px;
+        color: var(--text-primary);
+        margin: 1rem 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      /* Audio Visualizer Canvas */
+      .visualizer-container {
+        position: relative;
+        width: 100%;
+        height: 130px;
+        background: var(--visualizer-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .visualizer-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .visualizer-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        pointer-events: none;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      /* Button group */
+      .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 12px;
+        padding: 0.9rem 1.5rem;
+        font-family: "Inter", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 100%;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+        box-shadow: 0 0 16px var(--accent-glow);
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-danger {
+        background: var(--danger);
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #dc2626;
+        box-shadow: 0 0 16px var(--danger-glow);
+      }
+
+      .btn-warning {
+        background: var(--warning);
+        color: white;
+      }
+
+      .btn-warning:hover {
+        background: #d97706;
+      }
+
+      .btn-secondary {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        color: var(--text-primary);
+      }
+
+      .btn-secondary:hover {
+        background: var(--card-item-hover);
+      }
+
+      .recording-controls-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        width: 100%;
+      }
+
+      /* Preview Modal Overlay */
+      .preview-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .preview-modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .preview-modal {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        box-shadow: var(--shadow-lg);
+        width: 100%;
+        max-width: 640px;
+        max-height: 90vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+        gap: 1.5rem;
+        transform: translateY(20px);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+      }
+
+      .preview-modal-overlay.active .preview-modal {
+        transform: translateY(0);
+      }
+
+      .preview-video-container {
+        width: 100%;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #000;
+        box-shadow: var(--shadow-md);
+        position: relative;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+      }
+
+      .preview-video {
+        width: 100%;
+        max-height: 100%;
+      }
+
+      .filename-input-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .filename-input-wrapper {
+        display: flex;
+        align-items: center;
+        background: var(--card-item-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 0.25rem 0.75rem;
+      }
+
+      .filename-input-wrapper:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+      }
+
+      .filename-input {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-family: "Inter", sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        padding: 0.6rem 0.25rem;
+        outline: none;
+        flex-grow: 1;
+        width: 100%;
+      }
+
+      .file-extension {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        padding-left: 0.5rem;
+      }
+
+      .preview-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      /* Toasts notifications */
+      .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 2000;
+        max-width: 320px;
+        width: 100%;
+      }
+
+      .toast {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: var(--shadow-md);
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        animation: toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        color: var(--text-primary);
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+
+      .toast.error {
+        border-left: 4px solid var(--danger);
+      }
+
+      .toast.success {
+        border-left: 4px solid var(--success);
+      }
+
+      .toast.info {
+        border-left: 4px solid var(--accent);
+      }
+
+      .toast-icon {
+        margin-top: 1px;
+        flex-shrink: 0;
+      }
+
+      @keyframes toast-slide-in {
+        from {
+          transform: translateX(100%) translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .toast-close {
+        cursor: pointer;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        margin-left: auto;
+        padding: 2px;
+        display: flex;
+        align-items: center;
+      }
+
+      .toast-close:hover {
+        color: var(--text-primary);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.3);
+          opacity: 0.6;
+        }
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Creator Profile Section */
+      .creator-section {
+        margin-top: 0.5rem;
+        width: 100%;
+      }
+
+      .creator-card {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 20px;
+        box-shadow: var(--shadow-sm);
+        padding: 1.5rem;
+        transition:
+          transform 0.2s ease,
+          background-color 0.2s;
+      }
+
+      .creator-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .creator-text {
+        font-size: 0.85rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+      }
+
+      .creator-link {
+        font-weight: 700;
+        color: var(--accent);
+        text-decoration: none;
+        position: relative;
+        transition: color 0.2s;
+      }
+
+      .creator-link:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Floating visual blobs behind everything -->
+    <div class="bg-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+    </div>
+
+    <div class="app-container">
+      <!-- Header -->
+      <header>
+        <div class="logo">
+          <div class="logo-icon"></div>
+          <span>PabloRec</span>
+        </div>
+        <button id="themeToggle" class="theme-btn" aria-label="Toggle theme">
+          <!-- Sun Icon (default in light mode, shows option to switch to dark) -->
+          <svg
+            id="themeIconSun"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            style="display: none"
+          >
+            <path
+              d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75zM6.16 5.1a.75.75 0 0 1 1.06 0l1.59 1.59a.75.75 0 1 1-1.06 1.06L6.16 6.16a.75.75 0 0 1 0-1.06zm11.68 0a.75.75 0 0 1 0 1.06l-1.59 1.59a.75.75 0 1 1-1.06-1.06l1.59-1.59a.75.75 0 0 1 1.06 0zM12 5.25a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5zM3 12a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12zm14.25 0a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 0 1.5H18a.75.75 0 0 1-.75-.75zm-11.19 5.66a.75.75 0 0 1 1.06 0l1.59 1.59a.75.75 0 1 1-1.06 1.06l-1.59-1.59a.75.75 0 0 1 0-1.06zm11.68 0a.75.75 0 0 1 0 1.06l-1.59 1.59a.75.75 0 1 1-1.06-1.06l1.59-1.59a.75.75 0 0 1 0-1.06zM12 18.75a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75z"
+            />
+          </svg>
+          <!-- Moon Icon (shown in light mode to switch to dark mode) -->
+          <svg
+            id="themeIconMoon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162z"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <!-- Main Dashboard -->
+      <main class="dashboard">
+        <!-- Left Panel: Configurations -->
+        <section class="panel-section">
+          <div>
+            <h1 class="panel-title">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="color: var(--accent)"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                />
+              </svg>
+              <span>Capture Settings</span>
+            </h1>
+            <p class="setting-description">
+              Configure video qualities and audio devices before starting
+            </p>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Format Choice Settings Card -->
+            <div class="setting-card">
+              <div class="setting-label">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="color: var(--accent)"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <span>Output Format</span>
+              </div>
+              <div class="filter-control">
+                <label for="formatSelect" class="sr-only">Video Format</label>
+                <select id="formatSelect">
+                  <option value="webm">WebM Video (.webm)</option>
+                  <option value="mp4">MP4 Video (.mp4)</option>
+                </select>
+              </div>
+              <div
+                id="formatInfo"
+                class="setting-description"
+                style="margin-top: 0.25rem; font-size: 0.75rem; display: none"
+              ></div>
+              <div
+                id="formatWarning"
+                class="setting-description"
+                style="
+                  color: var(--danger);
+                  font-size: 0.75rem;
+                  display: none;
+                  line-height: 1.3;
+                "
+              >
+                MP4 recording is not supported on this browser. WebM is
+                recommended.
+              </div>
+            </div>
+
+            <!-- Video Settings Card -->
+            <div class="setting-card">
+              <div class="setting-label">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="color: var(--accent-secondary)"
+                >
+                  <path
+                    d="M23 7a2 2 0 0 0-2.45-1.45L16 7V5a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2l4.55 1.45A2 2 0 0 0 23 17V7z"
+                  />
+                </svg>
+                <span>Video Quality</span>
+              </div>
+              <div class="filter-control">
+                <label for="qualitySelect" class="sr-only">Resolution</label>
+                <select id="qualitySelect">
+                  <option value="default">Default Screen Resolution</option>
+                  <option value="1080p">1080p Full HD (1920x1080)</option>
+                  <option value="720p">720p HD (1280x720)</option>
+                </select>
+              </div>
+              <div class="filter-control">
+                <label for="fpsSelect" class="sr-only">Framerate</label>
+                <select id="fpsSelect">
+                  <option value="30">30 Frames per Second</option>
+                  <option value="60">60 Frames per Second (Smooth)</option>
+                </select>
+              </div>
+              <div
+                id="fpsWarning"
+                class="setting-description"
+                style="
+                  color: var(--warning);
+                  font-size: 0.75rem;
+                  display: none;
+                  line-height: 1.35;
+                  margin-top: 0.25rem;
+                "
+              >
+                ⚠️ 60 FPS requires high system performance. If recording becomes
+                choppy or audio crackles, try 30 FPS.
+              </div>
+            </div>
+
+            <!-- Audio Input Settings Card -->
+            <div class="setting-card">
+              <div class="setting-header">
+                <div class="setting-label">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="color: var(--accent)"
+                  >
+                    <path
+                      d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+                    />
+                    <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                  <span>Microphone Voice</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="micToggle" />
+                  <span class="slider-switch"></span>
+                </label>
+              </div>
+              <div class="setting-description">
+                Record speech with audio noise filtering
+              </div>
+
+              <!-- Collapsible Filters (dependent on micToggle) -->
+              <div
+                id="filterControls"
+                class="filters-collapsible"
+                style="display: none"
+              >
+                <div class="setting-header" style="margin-bottom: 0.25rem">
+                  <span
+                    class="setting-label"
+                    style="font-size: 0.75rem; font-weight: 500"
+                    >Noise Reduction Filters</span
+                  >
+                  <label class="switch" style="width: 36px; height: 20px">
+                    <input type="checkbox" id="filterToggle" checked />
+                    <span class="slider-switch"></span>
+                  </label>
+                </div>
+
+                <div class="filter-control">
+                  <div class="filter-info">
+                    <label for="highpassSlider">Low-cut (Highpass)</label>
+                    <span class="filter-val" id="highpassVal">80 Hz</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="highpassSlider"
+                    min="0"
+                    max="300"
+                    step="5"
+                    value="80"
+                  />
+                </div>
+
+                <div class="filter-control">
+                  <div class="filter-info">
+                    <label for="lowpassSlider">High-cut (Lowpass)</label>
+                    <span class="filter-val" id="lowpassVal">8000 Hz</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="lowpassSlider"
+                    min="2000"
+                    max="15000"
+                    step="100"
+                    value="8000"
+                  />
+                </div>
+
+                <div class="filter-control">
+                  <div class="filter-info">
+                    <label for="gainSlider">Mic Gain Boost</label>
+                    <span class="filter-val" id="gainVal">1.0x</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="gainSlider"
+                    min="0.5"
+                    max="3.0"
+                    step="0.1"
+                    value="1.0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- System Audio Card -->
+            <div class="setting-card">
+              <div class="setting-header">
+                <div class="setting-label">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="color: var(--accent-secondary)"
+                  >
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path
+                      d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"
+                    />
+                  </svg>
+                  <span>Capture System Audio</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="systemAudioToggle" />
+                  <span class="slider-switch"></span>
+                </label>
+              </div>
+              <div class="setting-description">
+                Record background sound from shared browser tab/screen
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Panel: Recording Controls & Visualizer -->
+        <section class="panel-section">
+          <div class="display-panel">
+            <!-- State display -->
+            <div class="status-header">
+              <span class="setting-label">Recording Monitor</span>
+              <div class="status-badge">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Ready</span>
+              </div>
+            </div>
+
+            <!-- Timer -->
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+
+            <!-- Real-time Visualizer -->
+            <div class="visualizer-container">
+              <canvas id="visualizer" class="visualizer-canvas"></canvas>
+              <div class="visualizer-placeholder" id="visualizerPlaceholder">
+                Mic Inactive
+              </div>
+            </div>
+
+            <!-- Main Button Triggers -->
+            <div class="action-buttons">
+              <!-- Start recording button -->
+              <button id="btnStart" class="btn btn-primary">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="3" fill="currentColor" />
+                </svg>
+                <span>Start Session</span>
+              </button>
+
+              <!-- State management rows during recording -->
+              <div
+                class="recording-controls-row"
+                id="recordingControls"
+                style="display: none"
+              >
+                <button id="btnPause" class="btn btn-warning">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="6" y="4" width="4" height="16" />
+                    <rect x="14" y="4" width="4" height="16" />
+                  </svg>
+                  <span id="pauseBtnText">Pause</span>
+                </button>
+                <button id="btnStop" class="btn btn-danger">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect
+                      x="4"
+                      y="4"
+                      width="16"
+                      height="16"
+                      rx="2"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  <span>Stop</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer / Creator Note Section -->
+      <footer class="creator-section">
+        <div class="creator-card">
+          <div
+            class="setting-label"
+            style="
+              font-size: 1.1rem;
+              font-family: &quot;Outfit&quot;, sans-serif;
+              font-weight: 700;
+              color: var(--accent);
+              margin-bottom: 0.5rem;
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+            "
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="color: var(--accent)"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>About</span>
+          </div>
+          <p class="creator-text">
+            This tool was crafted with passion by
+            <a
+              href="https://github.com/pablo-codes"
+              target="_blank"
+              class="creator-link"
+              >pablo-codes</a
+            >. I built this screen recorder cause all other screen recorders
+            where paid . Most online screen recorders are heavily cluttered,
+            require cloud uploads, or spam you with ads, or enforce arbitrary
+            limits. PabloRec runs fully client-side on your own device—using the
+            WebCodecs API and native browser MediaRecorders to encode WebM and
+            MP4 files directly in memory. Built in mid-2024 for internal usage,
+            it serves as a lightweight dashboard that respects user privacy and
+            delivers high-performance utility without any bloat. Please give a
+            star to this repository if you like this tool and share it with your
+            friends and family.
+          </p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Video Preview Overlay Modal -->
+    <div
+      class="preview-modal-overlay"
+      id="previewModalOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="previewModalTitle"
+    >
+      <div class="preview-modal">
+        <h2
+          id="previewModalTitle"
+          class="panel-title"
+          style="font-size: 1.5rem"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="color: var(--success)"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="10 8 16 12 10 16 10 8" />
+          </svg>
+          <span>Recording Captured!</span>
+        </h2>
+        <p class="setting-description" style="margin-top: -10px">
+          Review your video below and download it when ready.
+        </p>
+
+        <div class="preview-video-container">
+          <video id="previewVideo" class="preview-video" controls></video>
+        </div>
+
+        <div class="filename-input-container">
+          <label
+            for="filenameInput"
+            class="setting-label"
+            style="font-size: 0.85rem"
+            >Save Filename</label
+          >
+          <div class="filename-input-wrapper">
+            <input
+              type="text"
+              id="filenameInput"
+              class="filename-input"
+              value="pablo-recording"
+              placeholder="Enter file name..."
+            />
+            <span class="file-extension" id="downloadExtension">.webm</span>
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <button id="btnDiscard" class="btn btn-secondary">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="color: var(--danger)"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+            <span>Discard</span>
+          </button>
+          <button
+            id="btnDownload"
+            class="btn btn-primary"
+            style="background: var(--success)"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Download Video</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <script type="module">
+      /* --- Element Selectors --- */
+      const btnStart = document.getElementById("btnStart");
+      const btnPause = document.getElementById("btnPause");
+      const btnStop = document.getElementById("btnStop");
+      const pauseBtnText = document.getElementById("pauseBtnText");
+      const recordingControls = document.getElementById("recordingControls");
+      const statusText = document.getElementById("statusText");
+      const statusIndicator = document.getElementById("statusIndicator");
+      const timerDisplay = document.getElementById("timerDisplay");
+
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIconSun = document.getElementById("themeIconSun");
+      const themeIconMoon = document.getElementById("themeIconMoon");
+
+      const formatSelect = document.getElementById("formatSelect");
+      const formatInfo = document.getElementById("formatInfo");
+      const formatWarning = document.getElementById("formatWarning");
+      const qualitySelect = document.getElementById("qualitySelect");
+      const fpsSelect = document.getElementById("fpsSelect");
+      const fpsWarning = document.getElementById("fpsWarning");
+      const micToggle = document.getElementById("micToggle");
+      const filterToggle = document.getElementById("filterToggle");
+      const systemAudioToggle = document.getElementById("systemAudioToggle");
+      const filterControls = document.getElementById("filterControls");
+
+      const highpassSlider = document.getElementById("highpassSlider");
+      const lowpassSlider = document.getElementById("lowpassSlider");
+      const gainSlider = document.getElementById("gainSlider");
+      const highpassVal = document.getElementById("highpassVal");
+      const lowpassVal = document.getElementById("lowpassVal");
+      const gainVal = document.getElementById("gainVal");
+
+      const visualizer = document.getElementById("visualizer");
+      const visualizerPlaceholder = document.getElementById(
+        "visualizerPlaceholder",
+      );
+      const previewModalOverlay = document.getElementById(
+        "previewModalOverlay",
+      );
+      const previewVideo = document.getElementById("previewVideo");
+      const filenameInput = document.getElementById("filenameInput");
+      const btnDownload = document.getElementById("btnDownload");
+      const btnDiscard = document.getElementById("btnDiscard");
+      const toastContainer = document.getElementById("toastContainer");
+
+      /* --- Recording Variables --- */
+      let mediaRecorder;
+      let recordedChunks = [];
+      let videoStream;
+      let microphoneStream;
+      let audioContext;
+      let destinationNode;
+      let audioTracks = [];
+
+      // Timer vars
+      let startTime;
+      let elapsedTime = 0; // ms
+      let timerInterval;
+
+      // Visualizer variables
+      let canvasCtx = visualizer.getContext("2d");
+      let analyserNode;
+      let visualizerAnimationId;
+
+      // Capabilities Check
+      let supportsWebCodecs = false;
+      let supportsNativeMp4 = false;
+      let useWebCodecsForMp4 = false;
+
+      // WebCodecs Processing Engines variables
+      let videoEncoder = null;
+      let audioEncoder = null;
+      let videoReader = null;
+      let audioReader = null;
+      let muxer = null;
+
+      // Pause/resume timeline management for WebCodecs
+      let recordingState = "inactive"; // 'inactive', 'recording', 'paused', 'stopped'
+      let totalPauseDurationUs = 0;
+      let pauseStartUs = 0;
+
+      /* --- Init Theme --- */
+      // Sync local storage theme
+      const savedTheme = localStorage.getItem("recorder-theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      updateThemeUI(savedTheme);
+
+      themeToggle.addEventListener("click", () => {
+        const currentTheme =
+          document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", newTheme);
+        localStorage.setItem("recorder-theme", newTheme);
+        updateThemeUI(newTheme);
+      });
+
+      function updateThemeUI(theme) {
+        if (theme === "dark") {
+          themeIconSun.style.display = "block";
+          themeIconMoon.style.display = "none";
+        } else {
+          themeIconSun.style.display = "none";
+          themeIconMoon.style.display = "block";
+        }
+      }
+
+      /* --- Capabilities check --- */
+      function runBrowserCapabilityCheck() {
+        supportsWebCodecs =
+          typeof window.VideoEncoder === "function" &&
+          typeof window.AudioEncoder === "function";
+
+        // Safari native MP4 detection
+        try {
+          supportsNativeMp4 =
+            MediaRecorder.isTypeSupported("video/mp4") ||
+            MediaRecorder.isTypeSupported("video/mp4;codecs=avc1");
+        } catch (e) {
+          supportsNativeMp4 = false;
+        }
+
+        if (supportsNativeMp4) {
+          useWebCodecsForMp4 = false;
+          formatInfo.textContent = "Supported natively by your browser.";
+          formatInfo.style.color = "var(--success)";
+          formatInfo.style.display = "block";
+        } else if (supportsWebCodecs) {
+          useWebCodecsForMp4 = true;
+          formatInfo.textContent =
+            "Supported via hardware WebCodecs (Chrome/Edge).";
+          formatInfo.style.color = "var(--text-secondary)";
+          formatInfo.style.display = "block";
+        } else {
+          // Disable MP4 option
+          const mp4Option = formatSelect.querySelector('option[value="mp4"]');
+          if (mp4Option) mp4Option.disabled = true;
+          formatWarning.style.display = "block";
+          formatInfo.style.display = "none";
+        }
+      }
+
+      runBrowserCapabilityCheck();
+
+      formatSelect.addEventListener("change", () => {
+        if (formatSelect.value === "mp4") {
+          if (supportsNativeMp4) {
+            formatInfo.textContent = "Supported natively by your browser.";
+            formatInfo.style.color = "var(--success)";
+            formatInfo.style.display = "block";
+          } else if (supportsWebCodecs) {
+            formatInfo.textContent =
+              "Supported via hardware WebCodecs (Chrome/Edge).";
+            formatInfo.style.color = "var(--text-secondary)";
+            formatInfo.style.display = "block";
+          }
+          formatWarning.style.display = "none";
+        } else {
+          formatInfo.style.display = "none";
+          formatWarning.style.display = "none";
+        }
+      });
+
+      fpsSelect.addEventListener("change", () => {
+        if (fpsSelect.value === "60") {
+          fpsWarning.style.display = "block";
+        } else {
+          fpsWarning.style.display = "none";
+        }
+      });
+
+      /* --- Slider Controls --- */
+      highpassSlider.addEventListener("input", (e) => {
+        highpassVal.textContent = `${e.target.value} Hz`;
+        updateFilters();
+      });
+      lowpassSlider.addEventListener("input", (e) => {
+        lowpassVal.textContent = `${e.target.value} Hz`;
+        updateFilters();
+      });
+      gainSlider.addEventListener("input", (e) => {
+        gainVal.textContent = `${parseFloat(e.target.value).toFixed(1)}x`;
+        updateFilters();
+      });
+
+      micToggle.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          filterControls.style.display = "flex";
+          setupMicrophoneVisualizerPreview();
+        } else {
+          filterControls.style.display = "none";
+          stopMicrophoneVisualizerPreview();
+        }
+      });
+
+      filterToggle.addEventListener("change", () => {
+        updateFilters();
+      });
+
+      /* --- Toast Notifications --- */
+      function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+
+        let iconSvg = "";
+        if (type === "error") {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toast-icon" style="color: var(--danger);"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+        } else if (type === "success") {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toast-icon" style="color: var(--success);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+        } else {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toast-icon" style="color: var(--accent);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+        }
+
+        toast.innerHTML = `
+          ${iconSvg}
+          <div>${message}</div>
+          <button class="toast-close" aria-label="Close message">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        toast.querySelector(".toast-close").addEventListener("click", () => {
+          toast.remove();
+        });
+
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 5000);
+      }
+
+      /* --- Visualizer Graphics --- */
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = visualizer.getBoundingClientRect();
+        visualizer.width = rect.width * dpr;
+        visualizer.height = rect.height * dpr;
+        canvasCtx.scale(dpr, dpr);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      function startIdleVisualizer() {
+        let x = 0;
+        function drawIdle() {
+          if (analyserNode) return; // Stop if microphone analyzer starts
+
+          const width = visualizer.width / (window.devicePixelRatio || 1);
+          const height = visualizer.height / (window.devicePixelRatio || 1);
+
+          canvasCtx.clearRect(0, 0, width, height);
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(0, height / 2);
+
+          for (let i = 0; i < width; i++) {
+            const amplitude = Math.sin(x * 0.02) * 5 + 2;
+            const y = height / 2 + Math.sin(i * 0.015 + x * 0.05) * amplitude;
+            canvasCtx.lineTo(i, y);
+          }
+
+          canvasCtx.strokeStyle =
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--text-muted")
+              .trim() + "33";
+          canvasCtx.lineWidth = 2;
+          canvasCtx.stroke();
+
+          x++;
+          visualizerAnimationId = requestAnimationFrame(drawIdle);
+        }
+        drawIdle();
+      }
+
+      startIdleVisualizer();
+
+      function drawWaveform() {
+        if (!analyserNode) return;
+
+        visualizerAnimationId = requestAnimationFrame(drawWaveform);
+
+        const bufferLength = analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        if (recordingState === "paused") {
+          dataArray.fill(128); // Silence/flat line when paused
+        } else {
+          analyserNode.getByteTimeDomainData(dataArray);
+        }
+
+        const width = visualizer.width / (window.devicePixelRatio || 1);
+        const height = visualizer.height / (window.devicePixelRatio || 1);
+
+        canvasCtx.clearRect(0, 0, width, height);
+
+        canvasCtx.strokeStyle = getComputedStyle(document.documentElement)
+          .getPropertyValue("--panel-border")
+          .trim();
+        canvasCtx.lineWidth = 0.5;
+
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(0, height / 2);
+        canvasCtx.lineTo(width, height / 2);
+        canvasCtx.stroke();
+
+        canvasCtx.lineWidth = 3;
+        const waveColor = getComputedStyle(document.documentElement)
+          .getPropertyValue("--visualizer-wave")
+          .trim();
+        canvasCtx.strokeStyle = waveColor;
+        canvasCtx.beginPath();
+
+        const sliceWidth = width / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * height) / 2;
+
+          if (i === 0) {
+            canvasCtx.moveTo(x, y);
+          } else {
+            canvasCtx.lineTo(x, y);
+          }
+
+          x += sliceWidth;
+        }
+
+        canvasCtx.lineTo(width, height / 2);
+        canvasCtx.stroke();
+      }
+
+      /* --- Live Mic Preview on Idle --- */
+      let previewMicStream = null;
+      let previewContext = null;
+
+      async function setupMicrophoneVisualizerPreview() {
+        if (recordingState !== "inactive") return; // Skip preview logic if recording
+        if (!micToggle.checked) {
+          stopMicrophoneVisualizerPreview();
+          return;
+        }
+
+        try {
+          // If we already have a live previewMicStream, just make sure context and drawing are active
+          if (
+            previewMicStream &&
+            previewMicStream.getAudioTracks().length > 0 &&
+            previewMicStream.getAudioTracks()[0].readyState === "live"
+          ) {
+            if (!previewContext || previewContext.state === "closed") {
+              previewContext = new (
+                window.AudioContext || window.webkitAudioContext
+              )();
+              const previewSource =
+                previewContext.createMediaStreamSource(previewMicStream);
+              analyserNode = previewContext.createAnalyser();
+              analyserNode.fftSize = 1024;
+              previewSource.connect(analyserNode);
+            }
+            visualizerPlaceholder.textContent = "Mic Live";
+            if (visualizerAnimationId)
+              cancelAnimationFrame(visualizerAnimationId);
+            drawWaveform();
+            return;
+          }
+
+          stopMicrophoneVisualizerPreview();
+          if (!micToggle.checked) return;
+
+          previewMicStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+
+          previewContext = new (
+            window.AudioContext || window.webkitAudioContext
+          )();
+          const previewSource =
+            previewContext.createMediaStreamSource(previewMicStream);
+
+          analyserNode = previewContext.createAnalyser();
+          analyserNode.fftSize = 1024;
+
+          previewSource.connect(analyserNode);
+
+          visualizerPlaceholder.textContent = "Mic Live";
+          if (visualizerAnimationId)
+            cancelAnimationFrame(visualizerAnimationId);
+          drawWaveform();
+        } catch (err) {
+          console.warn("Could not start live mic preview:", err);
+          visualizerPlaceholder.textContent = "Mic Disabled";
+        }
+      }
+
+      function stopMicrophoneVisualizerPreview() {
+        if (visualizerAnimationId) cancelAnimationFrame(visualizerAnimationId);
+
+        if (previewMicStream) {
+          previewMicStream.getTracks().forEach((t) => t.stop());
+          previewMicStream = null;
+        }
+
+        if (previewContext && previewContext.state !== "closed") {
+          previewContext.close();
+          previewContext = null;
+        }
+
+        analyserNode = null;
+        visualizerPlaceholder.textContent = "Mic Inactive";
+
+        startIdleVisualizer();
+      }
+
+      // Try setting up mic preview on page load (returns immediately since micToggle is unchecked by default)
+      setupMicrophoneVisualizerPreview();
+
+      /* --- Audio Filter Chain Routing Functions --- */
+      let filterHighpassNode;
+      let filterLowpassNode;
+      let filterGainNode;
+
+      function updateFilters() {
+        if (!audioContext || audioContext.state === "closed") return;
+
+        const hpFreq = parseFloat(highpassSlider.value);
+        const lpFreq = parseFloat(lowpassSlider.value);
+        const gainVal = parseFloat(gainSlider.value);
+
+        if (filterHighpassNode) {
+          filterHighpassNode.frequency.setValueAtTime(
+            hpFreq,
+            audioContext.currentTime,
+          );
+        }
+        if (filterLowpassNode) {
+          filterLowpassNode.frequency.setValueAtTime(
+            lpFreq,
+            audioContext.currentTime,
+          );
+        }
+        if (filterGainNode) {
+          filterGainNode.gain.setValueAtTime(gainVal, audioContext.currentTime);
+        }
+      }
+
+      /* --- Timer Utilities --- */
+      function startTimer() {
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(() => {
+          elapsedTime = Date.now() - startTime;
+          timerDisplay.textContent = formatTime(elapsedTime);
+        }, 100);
+      }
+
+      function pauseTimer() {
+        clearInterval(timerInterval);
+      }
+
+      function stopTimer() {
+        clearInterval(timerInterval);
+        elapsedTime = 0;
+        timerDisplay.textContent = "00:00:00";
+      }
+
+      function formatTime(ms) {
+        const totalSecs = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+      }
+
+      /* --- Recording Engine Logic --- */
+
+      btnStart.addEventListener("click", startRecording);
+      btnPause.addEventListener("click", togglePause);
+      btnStop.addEventListener("click", stopRecording);
+
+      async function startRecording() {
+        recordedChunks = [];
+        elapsedTime = 0;
+        totalPauseDurationUs = 0;
+        pauseStartUs = 0;
+        stopMicrophoneVisualizerPreview(); // Terminate background preview stream first
+
+        const format = formatSelect.value;
+        const fps = parseInt(fpsSelect.value);
+        const quality = qualitySelect.value;
+
+        // Load mp4-muxer module if MP4 and WebCodecs are required
+        const isMp4 = format === "mp4";
+        const useWebCodecs = isMp4 && useWebCodecsForMp4;
+
+        if (useWebCodecs) {
+          statusText.textContent = "Loading Engine...";
+          try {
+            const { Muxer, ArrayBufferTarget } =
+              await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/+esm");
+            window.Mp4Muxer = Muxer;
+            window.Mp4ArrayBufferTarget = ArrayBufferTarget;
+          } catch (cdnErr) {
+            showToast(
+              "Failed to load H.264 MP4 encoder. Fallback to WebM.",
+              "error",
+            );
+            formatSelect.value = "webm";
+            resetAppState();
+            return;
+          }
+        }
+
+        try {
+          // Construct display dimensions constraints
+          const displayConstraints = {
+            video: {
+              frameRate: { ideal: fps, max: 60 },
+            },
+            audio: systemAudioToggle.checked
+              ? { echoCancellation: false }
+              : false,
+          };
+
+          if (quality === "1080p") {
+            displayConstraints.video.width = { ideal: 1920 };
+            displayConstraints.video.height = { ideal: 1080 };
+          } else if (quality === "720p") {
+            displayConstraints.video.width = { ideal: 1280 };
+            displayConstraints.video.height = { ideal: 720 };
+          }
+
+          // Request screen stream
+          videoStream =
+            await navigator.mediaDevices.getDisplayMedia(displayConstraints);
+
+          // Request mic stream if selected
+          if (micToggle.checked) {
+            try {
+              if (
+                previewMicStream &&
+                previewMicStream.getAudioTracks().length > 0 &&
+                previewMicStream.getAudioTracks()[0].readyState === "live"
+              ) {
+                microphoneStream = previewMicStream;
+              } else {
+                microphoneStream = await navigator.mediaDevices.getUserMedia({
+                  audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                  },
+                });
+              }
+            } catch (micErr) {
+              showToast(
+                "Microphone access denied. Recording screen audio only.",
+                "warning",
+              );
+              micToggle.checked = false;
+              filterControls.style.display = "none";
+            }
+          }
+
+          // Route and mix audio tracks if there is any source (Mic or Screen Audio)
+          const systemAudioTracks = videoStream.getAudioTracks();
+          const hasSystemAudio = systemAudioTracks.length > 0;
+          const hasMicAudio =
+            microphoneStream && microphoneStream.getAudioTracks().length > 0;
+
+          if (hasSystemAudio || hasMicAudio) {
+            audioContext = new (
+              window.AudioContext || window.webkitAudioContext
+            )();
+            destinationNode = audioContext.createMediaStreamDestination();
+
+            // Set up microphone node & filter routing
+            if (hasMicAudio) {
+              const micSource =
+                audioContext.createMediaStreamSource(microphoneStream);
+
+              filterHighpassNode = audioContext.createBiquadFilter();
+              filterHighpassNode.type = "highpass";
+
+              filterLowpassNode = audioContext.createBiquadFilter();
+              filterLowpassNode.type = "lowpass";
+
+              filterGainNode = audioContext.createGain();
+
+              updateFilters();
+
+              analyserNode = audioContext.createAnalyser();
+              analyserNode.fftSize = 1024;
+
+              micSource.connect(filterHighpassNode);
+              filterHighpassNode.connect(filterLowpassNode);
+              filterLowpassNode.connect(filterGainNode);
+              filterGainNode.connect(analyserNode);
+              analyserNode.connect(destinationNode);
+            }
+
+            // Route system audio from getDisplayMedia directly to destination mixed output
+            if (hasSystemAudio) {
+              const systemAudioSource =
+                audioContext.createMediaStreamSource(videoStream);
+              systemAudioSource.connect(destinationNode);
+            }
+
+            audioTracks = destinationNode.stream.getAudioTracks();
+          }
+
+          recordingState = "recording";
+
+          if (useWebCodecs) {
+            /* --- WebCodecs MP4 Pipeline --- */
+            const videoTrack = videoStream.getVideoTracks()[0];
+            const videoSettings = videoTrack.getSettings();
+
+            const encoderWidth = videoSettings.width || 1280;
+            const encoderHeight = videoSettings.height || 720;
+
+            // Deduce appropriate bitrates dynamically based on size and fps
+            let videoBitrate = 4_000_000;
+            if (encoderWidth >= 1920) {
+              videoBitrate = fps === 60 ? 6_000_000 : 4_000_000;
+            } else {
+              videoBitrate = fps === 60 ? 3_000_000 : 2_000_000;
+            }
+
+            // Initialize Muxer options
+            const muxerOptions = {
+              target: new window.Mp4ArrayBufferTarget(),
+              video: {
+                codec: "avc",
+                width: encoderWidth,
+                height: encoderHeight,
+              },
+              fastStart: "in-memory",
+            };
+
+            const hasAudio = audioTracks.length > 0;
+            let audioSampleRate = 48000;
+            let audioChannels = 1;
+
+            if (hasAudio) {
+              const audioTrack = audioTracks[0];
+              audioSampleRate = audioTrack.getSettings().sampleRate || 48000;
+              audioChannels = Math.min(
+                2,
+                audioTrack.getSettings().channelCount || 1,
+              );
+
+              muxerOptions.audio = {
+                codec: "aac",
+                numberOfChannels: audioChannels,
+                sampleRate: audioSampleRate,
+              };
+            }
+
+            muxer = new window.Mp4Muxer(muxerOptions);
+
+            // Configure VideoEncoder
+            videoEncoder = new VideoEncoder({
+              output: (chunk, meta) => {
+                muxer.addVideoChunk(chunk, meta);
+              },
+              error: (e) => {
+                console.error("VideoEncoder error:", e);
+                showToast(`Video encoding error: ${e.message}`, "error");
+              },
+            });
+
+            videoEncoder.configure({
+              codec: "avc1.42001f", // Baseline profile
+              width: encoderWidth,
+              height: encoderHeight,
+              bitrate: videoBitrate,
+              framerate: fps,
+              latencyMode: "realtime",
+            });
+
+            // Configure AudioEncoder
+            if (hasAudio) {
+              audioEncoder = new AudioEncoder({
+                output: (chunk, meta) => {
+                  // Reconstruct with timestamp offset to align pause/resume timeline
+                  const adjustedTimestamp =
+                    chunk.timestamp - totalPauseDurationUs;
+                  const dataBuffer = new ArrayBuffer(chunk.byteLength);
+                  chunk.copyTo(dataBuffer);
+
+                  const adjustedChunk = new EncodedAudioChunk({
+                    type: chunk.type,
+                    timestamp: adjustedTimestamp,
+                    duration: chunk.duration,
+                    data: dataBuffer,
+                  });
+
+                  muxer.addAudioChunk(adjustedChunk, meta);
+                },
+                error: (e) => {
+                  console.error("AudioEncoder error:", e);
+                  showToast(`Audio encoding error: ${e.message}`, "error");
+                },
+              });
+
+              audioEncoder.configure({
+                codec: "mp4a.40.2", // AAC Low Complexity
+                numberOfChannels: audioChannels,
+                sampleRate: audioSampleRate,
+                bitrate: 128000,
+              });
+            }
+
+            // Setup display listeners
+            videoTrack.addEventListener("ended", () => {
+              if (
+                recordingState === "recording" ||
+                recordingState === "paused"
+              ) {
+                stopRecording();
+              }
+            });
+
+            // Start visualizer loop
+            if (analyserNode) {
+              visualizerPlaceholder.textContent = "Mic Processing";
+              if (visualizerAnimationId)
+                cancelAnimationFrame(visualizerAnimationId);
+              drawWaveform();
+            } else {
+              visualizerPlaceholder.textContent = "No Audio Source";
+            }
+
+            // Start async capture and encoding streams
+            startTimer();
+            runVideoEncoderLoop(videoTrack);
+            if (hasAudio) {
+              runAudioEncoderLoop(audioTracks[0]);
+            }
+          } else {
+            /* --- MediaRecorder Pipeline (WebM & Safari native MP4) --- */
+            const combinedStreamTracks = [
+              videoStream.getVideoTracks()[0],
+              ...audioTracks,
+            ];
+
+            const combinedStream = new MediaStream(combinedStreamTracks);
+
+            let options = {};
+            if (isMp4 && supportsNativeMp4) {
+              options = { mimeType: "video/mp4;codecs=avc1" };
+            } else {
+              options = { mimeType: "video/webm;codecs=vp9,opus" };
+              if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: "video/webm;codecs=vp8,opus" };
+              }
+              if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: "video/webm" };
+              }
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, options);
+
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) {
+                recordedChunks.push(e.data);
+              }
+            };
+
+            mediaRecorder.onstop = () => {
+              const fileType = isMp4 ? "video/mp4" : "video/webm";
+              const ext = isMp4 ? "mp4" : "webm";
+              const blob = new Blob(recordedChunks, { type: fileType });
+              handleRecordingSaved(blob, ext);
+            };
+
+            videoStream.getVideoTracks()[0].addEventListener("ended", () => {
+              if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                stopRecording();
+              }
+            });
+
+            mediaRecorder.start(1000);
+            startTimer();
+
+            if (analyserNode) {
+              visualizerPlaceholder.textContent = "Mic Processing";
+              if (visualizerAnimationId)
+                cancelAnimationFrame(visualizerAnimationId);
+              drawWaveform();
+            } else {
+              visualizerPlaceholder.textContent = "No Audio Source";
+            }
+          }
+
+          setUIRecordingState(true);
+          showToast(
+            `Recording session started (${format.toUpperCase()}).`,
+            "success",
+          );
+        } catch (err) {
+          console.error("Recording initiation failure:", err);
+          showToast(`Recording failed: ${err.message || err}`, "error");
+          resetAppState();
+        }
+      }
+
+      /* --- Async WebCodecs capture streams loop --- */
+      async function runVideoEncoderLoop(videoTrack) {
+        const trackProcessor = new MediaStreamTrackProcessor({
+          track: videoTrack,
+        });
+        videoReader = trackProcessor.readable.getReader();
+
+        let frameCount = 0;
+
+        try {
+          while (
+            recordingState === "recording" ||
+            recordingState === "paused"
+          ) {
+            const { done, value: frame } = await videoReader.read();
+            if (done) break;
+
+            if (recordingState === "paused") {
+              frame.close();
+              continue;
+            }
+
+            frameCount++;
+            // Force a key frame every 120 frames (2-4 seconds) to ensure seekability
+            const forceKeyframe = frameCount % 120 === 0;
+
+            // Shift timestamp based on paused times
+            const adjustedTimestamp = frame.timestamp - totalPauseDurationUs;
+            const adjustedFrame = new VideoFrame(frame, {
+              timestamp: adjustedTimestamp,
+            });
+
+            videoEncoder.encode(adjustedFrame, { keyFrame: forceKeyframe });
+
+            adjustedFrame.close();
+            frame.close();
+          }
+        } catch (err) {
+          console.error("Video processing thread crashed:", err);
+        } finally {
+          try {
+            videoReader.releaseLock();
+          } catch (e) {}
+        }
+      }
+
+      async function runAudioEncoderLoop(audioTrack) {
+        const trackProcessor = new MediaStreamTrackProcessor({
+          track: audioTrack,
+        });
+        audioReader = trackProcessor.readable.getReader();
+
+        try {
+          while (
+            recordingState === "recording" ||
+            recordingState === "paused"
+          ) {
+            const { done, value: audioData } = await audioReader.read();
+            if (done) break;
+
+            if (recordingState === "paused") {
+              audioData.close();
+              continue;
+            }
+
+            audioEncoder.encode(audioData);
+            audioData.close();
+          }
+        } catch (err) {
+          console.error("Audio processing thread crashed:", err);
+        } finally {
+          try {
+            audioReader.releaseLock();
+          } catch (e) {}
+        }
+      }
+
+      function setUIPausedState(isPaused) {
+        if (isPaused) {
+          btnPause.className = "btn btn-primary";
+          btnPause.style.background = "var(--success)";
+          btnPause.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+            <span>Resume</span>
+          `;
+          statusText.textContent = "Paused";
+          statusIndicator.className = "status-indicator paused";
+        } else {
+          btnPause.className = "btn btn-warning";
+          btnPause.style.background = "";
+          btnPause.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            <span>Pause</span>
+          `;
+          statusText.textContent = "Recording";
+          statusIndicator.className = "status-indicator recording";
+        }
+      }
+
+      function togglePause() {
+        const format = formatSelect.value;
+        const useWebCodecs = format === "mp4" && useWebCodecsForMp4;
+
+        if (useWebCodecs) {
+          if (recordingState === "recording") {
+            recordingState = "paused";
+            pauseTimer();
+            setUIPausedState(true);
+            pauseStartUs = performance.now() * 1000;
+            showToast("Recording paused.", "info");
+          } else if (recordingState === "paused") {
+            recordingState = "recording";
+
+            if (pauseStartUs > 0) {
+              totalPauseDurationUs += performance.now() * 1000 - pauseStartUs;
+              pauseStartUs = 0;
+            }
+
+            startTimer();
+            setUIPausedState(false);
+            showToast("Recording resumed.", "success");
+          }
+        } else {
+          // Standard MediaRecorder toggle
+          if (!mediaRecorder) return;
+
+          if (mediaRecorder.state === "recording") {
+            mediaRecorder.pause();
+            pauseTimer();
+            setUIPausedState(true);
+            showToast("Recording paused.", "info");
+          } else if (mediaRecorder.state === "paused") {
+            mediaRecorder.resume();
+            startTimer();
+            setUIPausedState(false);
+            showToast("Recording resumed.", "success");
+          }
+        }
+      }
+
+      async function stopRecording() {
+        const format = formatSelect.value;
+        const useWebCodecs = format === "mp4" && useWebCodecsForMp4;
+
+        if (useWebCodecs) {
+          if (recordingState === "inactive") return;
+
+          recordingState = "stopped";
+          statusText.textContent = "Finalizing...";
+          showToast("Finalizing MP4 file, please wait...", "info");
+
+          pauseTimer();
+
+          // Cancel reader locks immediately
+          if (videoReader) {
+            try {
+              await videoReader.cancel();
+            } catch (e) {}
+            videoReader = null;
+          }
+          if (audioReader) {
+            try {
+              await audioReader.cancel();
+            } catch (e) {}
+            audioReader = null;
+          }
+
+          // Flush encoders to output remaining chunks
+          if (videoEncoder && videoEncoder.state !== "unconfigured") {
+            try {
+              await videoEncoder.flush();
+            } catch (e) {}
+          }
+          if (audioEncoder && audioEncoder.state !== "unconfigured") {
+            try {
+              await audioEncoder.flush();
+            } catch (e) {}
+          }
+
+          // Finalize MP4 muxer
+          let mp4Blob = null;
+          if (muxer) {
+            try {
+              await muxer.finalize();
+              const buffer = muxer.target.buffer;
+              mp4Blob = new Blob([buffer], { type: "video/mp4" });
+            } catch (muxErr) {
+              console.error("Muxer finalization failure:", muxErr);
+              showToast("Error generating MP4 file.", "error");
+            }
+            muxer = null;
+          }
+
+          // Clean up encoder contexts
+          if (videoEncoder) {
+            try {
+              videoEncoder.close();
+            } catch (e) {}
+            videoEncoder = null;
+          }
+          if (audioEncoder) {
+            try {
+              audioEncoder.close();
+            } catch (e) {}
+            audioEncoder = null;
+          }
+
+          if (mp4Blob) {
+            handleRecordingSaved(mp4Blob, "mp4");
+          } else {
+            resetAppState();
+          }
+        } else {
+          // Native MediaRecorder Stop
+          if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+          mediaRecorder.stop();
+          pauseTimer();
+          showToast("Recording stopped. Saving...", "info");
+        }
+      }
+
+      function handleRecordingSaved(blob, format) {
+        const videoUrl = URL.createObjectURL(blob);
+
+        previewVideo.src = videoUrl;
+        previewModalOverlay.classList.add("active");
+
+        const timeStamp = new Date().toISOString().slice(0, 10);
+        filenameInput.value = `pablo-recording-${timeStamp}`;
+
+        document.getElementById("downloadExtension").textContent = `.${format}`;
+
+        resetAppState();
+      }
+
+      // Cleanup capture tracks, close contexts and reset UI elements
+      function resetAppState() {
+        stopTimer();
+        recordingState = "inactive";
+
+        if (videoStream) {
+          videoStream.getTracks().forEach((track) => track.stop());
+          videoStream = null;
+        }
+
+        if (microphoneStream) {
+          if (!micToggle.checked) {
+            microphoneStream.getTracks().forEach((track) => track.stop());
+            microphoneStream = null;
+            previewMicStream = null;
+          } else {
+            previewMicStream = microphoneStream;
+            microphoneStream = null;
+          }
+        }
+
+        if (audioContext && audioContext.state !== "closed") {
+          audioContext.close();
+          audioContext = null;
+        }
+
+        analyserNode = null;
+        audioTracks = [];
+
+        setUIRecordingState(false);
+        setupMicrophoneVisualizerPreview();
+      }
+
+      function setUIRecordingState(isRecording) {
+        if (isRecording) {
+          btnStart.style.display = "none";
+          recordingControls.style.display = "grid";
+
+          statusText.textContent = "Recording";
+          statusIndicator.className = "status-indicator recording";
+
+          // Lock inputs
+          formatSelect.disabled = true;
+          qualitySelect.disabled = true;
+          fpsSelect.disabled = true;
+          micToggle.disabled = true;
+          systemAudioToggle.disabled = true;
+        } else {
+          btnStart.style.display = "flex";
+          recordingControls.style.display = "none";
+
+          // Reset pause button state
+          setUIPausedState(false);
+
+          statusText.textContent = "Ready";
+          statusIndicator.className = "status-indicator";
+
+          // Unlock inputs
+          formatSelect.disabled = false;
+          qualitySelect.disabled = false;
+          fpsSelect.disabled = false;
+          micToggle.disabled = false;
+          systemAudioToggle.disabled = false;
+        }
+      }
+
+      /* --- Preview Modal Actions --- */
+
+      btnDownload.addEventListener("click", () => {
+        const fileUrl = previewVideo.src;
+        if (!fileUrl) return;
+
+        let filename = filenameInput.value.trim().replace(/[^a-z0-9_-]/gi, "_");
+        if (!filename) filename = "screen-recording";
+
+        const ext = document.getElementById("downloadExtension").textContent;
+
+        const downloadLink = document.createElement("a");
+        downloadLink.style.display = "none";
+        downloadLink.href = fileUrl;
+        downloadLink.download = `${filename}${ext}`;
+
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+
+        setTimeout(() => {
+          document.body.removeChild(downloadLink);
+        }, 100);
+
+        showToast("Recording downloaded successfully!", "success");
+        closePreviewModal();
+      });
+
+      btnDiscard.addEventListener("click", () => {
+        if (confirm("Are you sure you want to discard this recording?")) {
+          closePreviewModal();
+          showToast("Recording discarded.", "info");
+        }
+      });
+
+      function closePreviewModal() {
+        previewModalOverlay.classList.remove("active");
+
+        if (previewVideo.src) {
+          URL.revokeObjectURL(previewVideo.src);
+          previewVideo.src = "";
+        }
+      }
+    </script>
+  </body>
+</html>
