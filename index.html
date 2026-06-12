@@ -2159,11 +2159,18 @@
 
           if (useWebCodecs) {
             /* --- WebCodecs MP4 Pipeline --- */
+
             const videoTrack = videoStream.getVideoTracks()[0];
             const videoSettings = videoTrack.getSettings();
 
-            const encoderWidth = videoSettings.width || 1280;
-            const encoderHeight = videoSettings.height || 720;
+            // Grab the raw dimensions from the screen/window capture
+            const rawWidth = videoSettings.width || 1280;
+            const rawHeight = videoSettings.height || 720;
+
+            // Force dimensions to be even numbers to satisfy H.264 requirements
+            const encoderWidth = rawWidth % 2 !== 0 ? rawWidth - 1 : rawWidth;
+            const encoderHeight =
+              rawHeight % 2 !== 0 ? rawHeight - 1 : rawHeight;
 
             // Deduce appropriate bitrates dynamically based on size and fps
             let videoBitrate = 4_000_000;
