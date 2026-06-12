@@ -18,7 +18,7 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://pablo-codes.me/Pablo-Recorder" />
+    <meta property="og:url" content="https://pablo-codes.me/pablo-recorder" />
     <meta
       property="og:title"
       content="PabloRec - Professional Web Screen Recorder"
@@ -33,7 +33,7 @@
     <meta property="twitter:card" content="summary_large_image" />
     <meta
       property="twitter:url"
-      content="https://pablo-codes.me/Pablo-Recorder"
+      content="https://pablo-codes.me/pablo-recorder"
     />
     <meta
       property="twitter:title"
@@ -1407,7 +1407,7 @@
             star to this repository if you like this tool and share it with your
             friends. Checkout the GitHub repository:
             <a
-              href="https://github.com/pablo-codes/Pablo-Recorder"
+              href="https://github.com/pablo-codes/pablo-recorder"
               target="_blank"
               class="creator-link"
               style="display: inline-flex; align-items: center; gap: 0.35rem"
@@ -1650,7 +1650,6 @@
           typeof window.VideoEncoder === "function" &&
           typeof window.AudioEncoder === "function";
 
-        // Safari native MP4 detection
         try {
           supportsNativeMp4 =
             MediaRecorder.isTypeSupported("video/mp4") ||
@@ -1659,19 +1658,21 @@
           supportsNativeMp4 = false;
         }
 
-        if (supportsNativeMp4) {
-          useWebCodecsForMp4 = false;
-          formatInfo.textContent = "Supported natively by your browser.";
-          formatInfo.style.color = "var(--success)";
-          formatInfo.style.display = "block";
-        } else if (supportsWebCodecs) {
+        // FIXED PRIORITY: Always prefer WebCodecs for proper metadata and AAC audio
+        if (supportsWebCodecs) {
           useWebCodecsForMp4 = true;
           formatInfo.textContent =
-            "Supported via hardware WebCodecs (Chrome/Edge).";
+            "Supported via hardware WebCodecs (Chromium-based).";
+          formatInfo.style.color = "var(--success)";
+          formatInfo.style.display = "block";
+        } else if (supportsNativeMp4) {
+          useWebCodecsForMp4 = false;
+          formatInfo.textContent =
+            "Supported via browser native MediaRecorder.";
           formatInfo.style.color = "var(--text-secondary)";
           formatInfo.style.display = "block";
         } else {
-          // Disable MP4 option
+          // Disable MP4 option if completely unsupported
           const mp4Option = formatSelect.querySelector('option[value="mp4"]');
           if (mp4Option) mp4Option.disabled = true;
           formatWarning.style.display = "block";
