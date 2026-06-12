@@ -2203,6 +2203,7 @@
                 height: encoderHeight,
               },
               fastStart: "in-memory",
+              firstTimestampBehavior: "offset",
             };
 
             const hasAudio = audioTracks.length > 0;
@@ -2238,7 +2239,7 @@
             });
 
             videoEncoder.configure({
-              codec: "avc1.42001f", // Baseline profile
+              codec: "avc1.42002a", // High profile
               width: encoderWidth,
               height: encoderHeight,
               bitrate: videoBitrate,
