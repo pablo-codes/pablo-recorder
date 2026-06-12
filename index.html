@@ -1684,13 +1684,15 @@
 
       formatSelect.addEventListener("change", () => {
         if (formatSelect.value === "mp4") {
-          if (supportsNativeMp4) {
-            formatInfo.textContent = "Supported natively by your browser.";
+          // FIXED PRIORITY: Always prioritize WebCodecs if available
+          if (supportsWebCodecs) {
+            formatInfo.textContent =
+              "Supported via hardware WebCodecs (Chromium-based).";
             formatInfo.style.color = "var(--success)";
             formatInfo.style.display = "block";
-          } else if (supportsWebCodecs) {
+          } else if (supportsNativeMp4) {
             formatInfo.textContent =
-              "Supported via hardware WebCodecs (Chrome/Edge).";
+              "Supported via browser native MediaRecorder.";
             formatInfo.style.color = "var(--text-secondary)";
             formatInfo.style.display = "block";
           }
