@@ -263,14 +263,21 @@ function downloadRecording() {
   }, 100);
 
   showToast('Recording downloaded successfully!', 'success');
-  closePreviewModal();
+  closePreviewModal({ delayRevoke: true });
 }
 
-function closePreviewModal() {
+function closePreviewModal(options = {}) {
   elements.previewModalOverlay.classList.remove('active');
 
-  if (elements.previewVideo.src) {
-    URL.revokeObjectURL(elements.previewVideo.src);
+  const currentSrc = elements.previewVideo.src;
+  if (currentSrc) {
+    if (options.delayRevoke) {
+      setTimeout(() => {
+        URL.revokeObjectURL(currentSrc);
+      }, 10000);
+    } else {
+      URL.revokeObjectURL(currentSrc);
+    }
     elements.previewVideo.src = '';
   }
 }

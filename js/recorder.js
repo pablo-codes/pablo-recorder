@@ -1,6 +1,6 @@
 /**
  * Recorder Module - Main recording engine for PabloRec
- * Handles screen capture, audio mixing, and video encoding
+ * Handles screen capture, webcam composition, audio mixing, and video encoding
  */
 
 import { webcamManager } from './webcam.js';
@@ -43,6 +43,7 @@ export class ScreenRecorder {
     this.recordingState = 'inactive'; // 'inactive', 'recording', 'paused', 'stopped'
     this.totalPauseDurationUs = 0;
     this.pauseStartUs = 0;
+    this.firstFrameTimeUs = 0;
 
     // Filter nodes
     this.filterHighpassNode = null;
@@ -52,6 +53,13 @@ export class ScreenRecorder {
     // Preview mic stream
     this.previewMicStream = null;
     this.previewContext = null;
+
+    // Offscreen Canvas Compositor for Webcam
+    this.compositorCanvas = null;
+    this.compositorCtx = null;
+    this.screenVideoElement = null;
+    this.compositorAnimationId = null;
+    this.compositedStream = null;
   }
 
   /**
@@ -175,7 +183,7 @@ export class ScreenRecorder {
    */
   async setupMicrophoneVisualizerPreview() {
     if (this.recordingState !== 'inactive') return;
-    
+
     const micToggle = document.getElementById('micToggle');
     if (!micToggle || !micToggle.checked) {
       this.stopMicrophoneVisualizerPreview();
@@ -195,6 +203,11 @@ export class ScreenRecorder {
           this.analyserNode.fftSize = 1024;
           previewSource.connect(this.analyserNode);
         }
+
+        if (this.previewContext.state === 'suspended') {
+          await this.previewContext.resume();
+        }
+
         document.getElementById('visualizerPlaceholder').textContent = 'Mic Live';
         if (this.visualizerAnimationId) cancelAnimationFrame(this.visualizerAnimationId);
         this.drawWaveform();
@@ -207,8 +220,11 @@ export class ScreenRecorder {
       this.previewMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
       this.previewContext = new (window.AudioContext || window.webkitAudioContext)();
-      const previewSource = this.previewContext.createMediaStreamSource(this.previewMicStream);
+      if (this.previewContext.state === 'suspended') {
+        await this.previewContext.resume();
+      }
 
+      const previewSource = this.previewContext.createMediaStreamSource(this.previewMicStream);
       this.analyserNode = this.previewContext.createAnalyser();
       this.analyserNode.fftSize = 1024;
 
@@ -254,12 +270,15 @@ export class ScreenRecorder {
   updateFilters() {
     if (!this.audioContext || this.audioContext.state === 'closed') return;
 
+    const filterToggle = document.getElementById('filterToggle');
+    const filtersEnabled = filterToggle ? filterToggle.checked : true;
+
     const highpassSlider = document.getElementById('highpassSlider');
     const lowpassSlider = document.getElementById('lowpassSlider');
     const gainSlider = document.getElementById('gainSlider');
 
-    const hpFreq = parseFloat(highpassSlider.value);
-    const lpFreq = parseFloat(lowpassSlider.value);
+    const hpFreq = filtersEnabled ? parseFloat(highpassSlider.value) : 0;
+    const lpFreq = filtersEnabled ? parseFloat(lowpassSlider.value) : 20000;
     const gainVal = parseFloat(gainSlider.value);
 
     if (this.filterHighpassNode) {
@@ -317,23 +336,25 @@ export class ScreenRecorder {
     this.elapsedTime = 0;
     this.totalPauseDurationUs = 0;
     this.pauseStartUs = 0;
-    this.stopMicrophoneVisualizerPreview();
+    this.firstFrameTimeUs = 0;
 
-    const isMp4 = format === 'mp4';
-    const useWebCodecs = isMp4 && this.useWebCodecsForMp4;
+    let isMp4 = format === 'mp4';
+    let useWebCodecs = isMp4 && this.useWebCodecsForMp4;
 
     // Load mp4-muxer if needed
     if (useWebCodecs) {
       const statusText = document.getElementById('statusText');
       if (statusText) statusText.textContent = 'Loading Engine...';
-      
+
       try {
         const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/+esm');
         window.Mp4Muxer = Muxer;
         window.Mp4ArrayBufferTarget = ArrayBufferTarget;
       } catch (cdnErr) {
-        showToast('Failed to load H.264 MP4 encoder. Fallback to WebM.', 'error');
-        throw new Error('MP4 encoder load failed');
+        console.warn('Failed to load H.264 MP4 encoder from CDN. Falling back to WebM:', cdnErr);
+        showToast('Offline / MP4 encoder CDN unavailable. Falling back to WebM.', 'warning');
+        useWebCodecs = false;
+        isMp4 = false;
       }
     }
 
@@ -368,7 +389,7 @@ export class ScreenRecorder {
         }
       }
 
-      // Request mic stream if selected
+      // Request or reuse mic stream if selected
       if (options.micEnabled) {
         try {
           if (
@@ -393,6 +414,13 @@ export class ScreenRecorder {
         }
       }
 
+      // Clean up visualizer preview stream references without destroying the mic track
+      if (this.visualizerAnimationId) cancelAnimationFrame(this.visualizerAnimationId);
+      if (this.previewContext && this.previewContext.state !== 'closed') {
+        this.previewContext.close();
+        this.previewContext = null;
+      }
+
       // Route and mix audio tracks
       const systemAudioTracks = this.videoStream.getAudioTracks();
       const hasSystemAudio = systemAudioTracks.length > 0;
@@ -400,6 +428,12 @@ export class ScreenRecorder {
 
       if (hasSystemAudio || hasMicAudio) {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Resume AudioContext if suspended to guarantee audible recording
+        if (this.audioContext.state === 'suspended') {
+          await this.audioContext.resume();
+        }
+
         this.destinationNode = this.audioContext.createMediaStreamDestination();
 
         if (hasMicAudio) {
@@ -434,15 +468,16 @@ export class ScreenRecorder {
       }
 
       this.recordingState = 'recording';
+      this._setUIRecordingState(true);
 
       if (useWebCodecs) {
         await this._startWebCodecsRecording(format, fps, isMp4);
       } else {
-        this._startMediaRecorderRecording(format, isMp4);
+        this._startMediaRecorderRecording(format, fps, isMp4);
       }
 
       this.startTimer();
-      showToast(`Recording session started (${format.toUpperCase()}).`, 'success');
+      showToast(`Recording session started (${isMp4 ? 'MP4' : 'WEBM'}).`, 'success');
 
       return true;
     } catch (err) {
@@ -451,6 +486,44 @@ export class ScreenRecorder {
       this.resetAppState();
       throw err;
     }
+  }
+
+  /**
+   * Setup compositor canvas for screen + webcam overlay
+   */
+  _setupCompositor(fps) {
+    const videoTrack = this.videoStream.getVideoTracks()[0];
+    const settings = videoTrack.getSettings();
+
+    const width = settings.width || 1280;
+    const height = settings.height || 720;
+
+    this.compositorCanvas = document.createElement('canvas');
+    this.compositorCanvas.width = width;
+    this.compositorCanvas.height = height;
+    this.compositorCtx = this.compositorCanvas.getContext('2d');
+
+    this.screenVideoElement = document.createElement('video');
+    this.screenVideoElement.srcObject = this.videoStream;
+    this.screenVideoElement.muted = true;
+    this.screenVideoElement.playsInline = true;
+    this.screenVideoElement.play();
+
+    const drawFrame = () => {
+      if (this.recordingState === 'inactive' || this.recordingState === 'stopped') return;
+
+      this.compositorCtx.drawImage(this.screenVideoElement, 0, 0, width, height);
+
+      if (webcamManager.isActive()) {
+        const composited = webcamManager.getCompositedCanvas(this.compositorCanvas);
+        this.compositorCtx.drawImage(composited, 0, 0);
+      }
+
+      this.compositorAnimationId = requestAnimationFrame(drawFrame);
+    };
+
+    drawFrame();
+    return this.compositorCanvas.captureStream(fps);
   }
 
   /**
@@ -524,7 +597,7 @@ export class ScreenRecorder {
     if (hasAudio) {
       this.audioEncoder = new AudioEncoder({
         output: (chunk, meta) => {
-          const adjustedTimestamp = chunk.timestamp - this.totalPauseDurationUs;
+          const adjustedTimestamp = Math.max(0, chunk.timestamp - this.firstFrameTimeUs - this.totalPauseDurationUs);
           const dataBuffer = new ArrayBuffer(chunk.byteLength);
           chunk.copyTo(dataBuffer);
 
@@ -574,9 +647,17 @@ export class ScreenRecorder {
   /**
    * Start recording with MediaRecorder pipeline
    */
-  _startMediaRecorderRecording(format, isMp4) {
+  _startMediaRecorderRecording(format, fps, isMp4) {
+    let recordingVideoTrack = this.videoStream.getVideoTracks()[0];
+
+    // If webcam is active, use composited canvas stream so webcam is recorded into the output video file
+    if (webcamManager.isActive()) {
+      this.compositedStream = this._setupCompositor(fps);
+      recordingVideoTrack = this.compositedStream.getVideoTracks()[0];
+    }
+
     const combinedStreamTracks = [
-      this.videoStream.getVideoTracks()[0],
+      recordingVideoTrack,
       ...this.audioTracks
     ];
 
@@ -636,6 +717,14 @@ export class ScreenRecorder {
 
     let frameCount = 0;
 
+    // Create offscreen composition canvas for webcam overlay in WebCodecs
+    const width = videoTrack.getSettings().width || 1280;
+    const height = videoTrack.getSettings().height || 720;
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = width;
+    offscreenCanvas.height = height;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+
     try {
       while (this.recordingState === 'recording' || this.recordingState === 'paused') {
         const { done, value: frame } = await this.videoReader.read();
@@ -649,8 +738,20 @@ export class ScreenRecorder {
         frameCount++;
         const forceKeyframe = frameCount % 120 === 0;
 
-        const adjustedTimestamp = frame.timestamp - this.totalPauseDurationUs;
-        const adjustedFrame = new VideoFrame(frame, {
+        if (this.firstFrameTimeUs === 0) {
+          this.firstFrameTimeUs = frame.timestamp;
+        }
+
+        const adjustedTimestamp = Math.max(0, frame.timestamp - this.firstFrameTimeUs - this.totalPauseDurationUs);
+
+        let targetFrameSource = frame;
+        if (webcamManager.isActive()) {
+          offscreenCtx.drawImage(frame, 0, 0, width, height);
+          const compositedCanvas = webcamManager.getCompositedCanvas(offscreenCanvas);
+          targetFrameSource = compositedCanvas;
+        }
+
+        const adjustedFrame = new VideoFrame(targetFrameSource, {
           timestamp: adjustedTimestamp
         });
 
@@ -664,7 +765,7 @@ export class ScreenRecorder {
     } finally {
       try {
         this.videoReader.releaseLock();
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -693,7 +794,7 @@ export class ScreenRecorder {
     } finally {
       try {
         this.audioReader.releaseLock();
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -762,25 +863,25 @@ export class ScreenRecorder {
       if (this.videoReader) {
         try {
           await this.videoReader.cancel();
-        } catch (e) {}
+        } catch (e) { }
         this.videoReader = null;
       }
       if (this.audioReader) {
         try {
           await this.audioReader.cancel();
-        } catch (e) {}
+        } catch (e) { }
         this.audioReader = null;
       }
 
       if (this.videoEncoder && this.videoEncoder.state !== 'unconfigured') {
         try {
           await this.videoEncoder.flush();
-        } catch (e) {}
+        } catch (e) { }
       }
       if (this.audioEncoder && this.audioEncoder.state !== 'unconfigured') {
         try {
           await this.audioEncoder.flush();
-        } catch (e) {}
+        } catch (e) { }
       }
 
       let mp4Blob = null;
@@ -799,13 +900,13 @@ export class ScreenRecorder {
       if (this.videoEncoder) {
         try {
           this.videoEncoder.close();
-        } catch (e) {}
+        } catch (e) { }
         this.videoEncoder = null;
       }
       if (this.audioEncoder) {
         try {
           this.audioEncoder.close();
-        } catch (e) {}
+        } catch (e) { }
         this.audioEncoder = null;
       }
 
@@ -849,6 +950,22 @@ export class ScreenRecorder {
   resetAppState() {
     this.stopTimer();
     this.recordingState = 'inactive';
+
+    if (this.compositorAnimationId) {
+      cancelAnimationFrame(this.compositorAnimationId);
+      this.compositorAnimationId = null;
+    }
+
+    if (this.compositedStream) {
+      this.compositedStream.getTracks().forEach(track => track.stop());
+      this.compositedStream = null;
+    }
+
+    if (this.screenVideoElement) {
+      this.screenVideoElement.pause();
+      this.screenVideoElement.srcObject = null;
+      this.screenVideoElement = null;
+    }
 
     if (this.videoStream) {
       this.videoStream.getTracks().forEach(track => track.stop());
