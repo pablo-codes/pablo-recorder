@@ -64,9 +64,6 @@
       href="./favicon-16x16.png"
     />
     <link rel="manifest" href="./site.webmanifest" />
-    <!-- CSS -->
-    <link rel="stylesheet" href="./css/styles.css" />
-
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -74,6 +71,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
+
+    <style>
       :root[data-theme="light"] {
         --bg-gradient: radial-gradient(
           circle at 10% 20%,
@@ -1277,23 +1276,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Webcam Toggle -->
-          <div class="setting-card">
-            <div class="setting-header">
-              <div class="setting-label">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span>Include Webcam</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="webcamToggle" />
-                <span class="slider-switch"></span>
-              </label>
-            </div>
-            <div class="setting-description">
-              Add picture-in-picture webcam overlay (drag to reposition)
-            </div>
-          </div>
         </section>
 
         <!-- Right Panel: Recording Controls & Visualizer -->
@@ -1569,23 +1551,1172 @@
     <!-- Toast Notifications Container -->
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-    <!-- Webcam Position Presets -->
-    <div class="setting-card" id="webcamControls" style="display: none;">
-      <div class="setting-header">
-        <label class="setting-label">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          Webcam Position
-        </label>
-      </div>
-      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-        <button class="btn btn-secondary" id="presetTopLeft" style="padding: 0.5rem 0.75rem; font-size: 0.75rem;">Top Left</button>
-        <button class="btn btn-secondary" id="presetTopRight" style="padding: 0.5rem 0.75rem; font-size: 0.75rem;">Top Right</button>
-        <button class="btn btn-secondary" id="presetBottomLeft" style="padding: 0.5rem 0.75rem; font-size: 0.75rem;">Bottom Left</button>
-        <button class="btn btn-secondary" id="presetBottomRight" style="padding: 0.5rem 0.75rem; font-size: 0.75rem;">Bottom Right</button>
-      </div>
-      <p class="setting-description">Drag the webcam window to reposition, or use preset buttons</p>
-    </div>
+    <script type="module">
+      /* --- Element Selectors --- */
+      const btnStart = document.getElementById("btnStart");
+      const btnPause = document.getElementById("btnPause");
+      const btnStop = document.getElementById("btnStop");
+      const pauseBtnText = document.getElementById("pauseBtnText");
+      const recordingControls = document.getElementById("recordingControls");
+      const statusText = document.getElementById("statusText");
+      const statusIndicator = document.getElementById("statusIndicator");
+      const timerDisplay = document.getElementById("timerDisplay");
 
-    <script type="module" src="./js/app.js"></script>
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIconSun = document.getElementById("themeIconSun");
+      const themeIconMoon = document.getElementById("themeIconMoon");
+
+      const formatSelect = document.getElementById("formatSelect");
+      const formatInfo = document.getElementById("formatInfo");
+      const formatWarning = document.getElementById("formatWarning");
+      const qualitySelect = document.getElementById("qualitySelect");
+      const fpsSelect = document.getElementById("fpsSelect");
+      const fpsWarning = document.getElementById("fpsWarning");
+      const micToggle = document.getElementById("micToggle");
+      const filterToggle = document.getElementById("filterToggle");
+      const systemAudioToggle = document.getElementById("systemAudioToggle");
+      const filterControls = document.getElementById("filterControls");
+
+      const highpassSlider = document.getElementById("highpassSlider");
+      const lowpassSlider = document.getElementById("lowpassSlider");
+      const gainSlider = document.getElementById("gainSlider");
+      const highpassVal = document.getElementById("highpassVal");
+      const lowpassVal = document.getElementById("lowpassVal");
+      const gainVal = document.getElementById("gainVal");
+
+      const visualizer = document.getElementById("visualizer");
+      const visualizerPlaceholder = document.getElementById(
+        "visualizerPlaceholder",
+      );
+      const previewModalOverlay = document.getElementById(
+        "previewModalOverlay",
+      );
+      const previewVideo = document.getElementById("previewVideo");
+      const filenameInput = document.getElementById("filenameInput");
+      const btnDownload = document.getElementById("btnDownload");
+      const btnDiscard = document.getElementById("btnDiscard");
+      const toastContainer = document.getElementById("toastContainer");
+
+      /* --- Recording Variables --- */
+      let mediaRecorder;
+      let recordedChunks = [];
+      let videoStream;
+      let microphoneStream;
+      let audioContext;
+      let destinationNode;
+      let audioTracks = [];
+
+      // Timer vars
+      let startTime;
+      let elapsedTime = 0; // ms
+      let timerInterval;
+
+      // Visualizer variables
+      let canvasCtx = visualizer.getContext("2d");
+      let analyserNode;
+      let visualizerAnimationId;
+
+      // Capabilities Check
+      let supportsWebCodecs = false;
+      let supportsNativeMp4 = false;
+      let useWebCodecsForMp4 = false;
+
+      // WebCodecs Processing Engines variables
+      let videoEncoder = null;
+      let audioEncoder = null;
+      let videoReader = null;
+      let audioReader = null;
+      let muxer = null;
+
+      // Pause/resume timeline management for WebCodecs
+      let recordingState = "inactive"; // 'inactive', 'recording', 'paused', 'stopped'
+      let totalPauseDurationUs = 0;
+      let pauseStartUs = 0;
+
+      /* --- Init Theme --- */
+      // Sync local storage theme
+      const savedTheme = localStorage.getItem("recorder-theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      updateThemeUI(savedTheme);
+
+      themeToggle.addEventListener("click", () => {
+        const currentTheme =
+          document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", newTheme);
+        localStorage.setItem("recorder-theme", newTheme);
+        updateThemeUI(newTheme);
+      });
+
+      function updateThemeUI(theme) {
+        if (theme === "dark") {
+          themeIconSun.style.display = "block";
+          themeIconMoon.style.display = "none";
+        } else {
+          themeIconSun.style.display = "none";
+          themeIconMoon.style.display = "block";
+        }
+      }
+
+      /* --- Capabilities check --- */
+      function runBrowserCapabilityCheck() {
+        supportsWebCodecs =
+          typeof window.VideoEncoder === "function" &&
+          typeof window.AudioEncoder === "function";
+
+        try {
+          supportsNativeMp4 =
+            MediaRecorder.isTypeSupported("video/mp4") ||
+            MediaRecorder.isTypeSupported("video/mp4;codecs=avc1");
+        } catch (e) {
+          supportsNativeMp4 = false;
+        }
+
+        // FIXED PRIORITY: Always prefer WebCodecs for proper metadata and AAC audio
+        if (supportsWebCodecs) {
+          useWebCodecsForMp4 = true;
+          formatInfo.textContent =
+            "Supported via hardware WebCodecs (Chromium-based).";
+          formatInfo.style.color = "var(--success)";
+          formatInfo.style.display = "block";
+        } else if (supportsNativeMp4) {
+          useWebCodecsForMp4 = false;
+          formatInfo.textContent =
+            "Supported via browser native MediaRecorder.";
+          formatInfo.style.color = "var(--text-secondary)";
+          formatInfo.style.display = "block";
+        } else {
+          // Disable MP4 option if completely unsupported
+          const mp4Option = formatSelect.querySelector('option[value="mp4"]');
+          if (mp4Option) mp4Option.disabled = true;
+          formatWarning.style.display = "block";
+          formatInfo.style.display = "none";
+        }
+      }
+
+      runBrowserCapabilityCheck();
+
+      formatSelect.addEventListener("change", () => {
+        if (formatSelect.value === "mp4") {
+          // FIXED PRIORITY: Always prioritize WebCodecs if available
+          if (supportsWebCodecs) {
+            formatInfo.textContent =
+              "Supported via hardware WebCodecs (Chromium-based).";
+            formatInfo.style.color = "var(--success)";
+            formatInfo.style.display = "block";
+          } else if (supportsNativeMp4) {
+            formatInfo.textContent =
+              "Supported via browser native MediaRecorder.";
+            formatInfo.style.color = "var(--text-secondary)";
+            formatInfo.style.display = "block";
+          }
+          formatWarning.style.display = "none";
+        } else {
+          formatInfo.style.display = "none";
+          formatWarning.style.display = "none";
+        }
+      });
+
+      fpsSelect.addEventListener("change", () => {
+        if (fpsSelect.value === "60") {
+          fpsWarning.style.display = "block";
+        } else {
+          fpsWarning.style.display = "none";
+        }
+      });
+
+      /* --- Slider Controls --- */
+      highpassSlider.addEventListener("input", (e) => {
+        highpassVal.textContent = `${e.target.value} Hz`;
+        updateFilters();
+      });
+      lowpassSlider.addEventListener("input", (e) => {
+        lowpassVal.textContent = `${e.target.value} Hz`;
+        updateFilters();
+      });
+      gainSlider.addEventListener("input", (e) => {
+        gainVal.textContent = `${parseFloat(e.target.value).toFixed(1)}x`;
+        updateFilters();
+      });
+
+      micToggle.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          filterControls.style.display = "flex";
+          setupMicrophoneVisualizerPreview();
+        } else {
+          filterControls.style.display = "none";
+          stopMicrophoneVisualizerPreview();
+        }
+      });
+
+      filterToggle.addEventListener("change", () => {
+        updateFilters();
+      });
+
+      /* --- Toast Notifications --- */
+      function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+
+        let iconSvg = "";
+        if (type === "error") {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toast-icon" style="color: var(--danger);"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+        } else if (type === "success") {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toast-icon" style="color: var(--success);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+        } else {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="toast-icon" style="color: var(--accent);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+        }
+
+        toast.innerHTML = `
+          ${iconSvg}
+          <div>${message}</div>
+          <button class="toast-close" aria-label="Close message">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        toast.querySelector(".toast-close").addEventListener("click", () => {
+          toast.remove();
+        });
+
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 5000);
+      }
+
+      /* --- Visualizer Graphics --- */
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = visualizer.getBoundingClientRect();
+        visualizer.width = rect.width * dpr;
+        visualizer.height = rect.height * dpr;
+        canvasCtx.scale(dpr, dpr);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      function startIdleVisualizer() {
+        let x = 0;
+        function drawIdle() {
+          if (analyserNode) return; // Stop if microphone analyzer starts
+
+          const width = visualizer.width / (window.devicePixelRatio || 1);
+          const height = visualizer.height / (window.devicePixelRatio || 1);
+
+          canvasCtx.clearRect(0, 0, width, height);
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(0, height / 2);
+
+          for (let i = 0; i < width; i++) {
+            const amplitude = Math.sin(x * 0.02) * 5 + 2;
+            const y = height / 2 + Math.sin(i * 0.015 + x * 0.05) * amplitude;
+            canvasCtx.lineTo(i, y);
+          }
+
+          canvasCtx.strokeStyle =
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--text-muted")
+              .trim() + "33";
+          canvasCtx.lineWidth = 2;
+          canvasCtx.stroke();
+
+          x++;
+          visualizerAnimationId = requestAnimationFrame(drawIdle);
+        }
+        drawIdle();
+      }
+
+      startIdleVisualizer();
+
+      function drawWaveform() {
+        if (!analyserNode) return;
+
+        visualizerAnimationId = requestAnimationFrame(drawWaveform);
+
+        const bufferLength = analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        if (recordingState === "paused") {
+          dataArray.fill(128); // Silence/flat line when paused
+        } else {
+          analyserNode.getByteTimeDomainData(dataArray);
+        }
+
+        const width = visualizer.width / (window.devicePixelRatio || 1);
+        const height = visualizer.height / (window.devicePixelRatio || 1);
+
+        canvasCtx.clearRect(0, 0, width, height);
+
+        canvasCtx.strokeStyle = getComputedStyle(document.documentElement)
+          .getPropertyValue("--panel-border")
+          .trim();
+        canvasCtx.lineWidth = 0.5;
+
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(0, height / 2);
+        canvasCtx.lineTo(width, height / 2);
+        canvasCtx.stroke();
+
+        canvasCtx.lineWidth = 3;
+        const waveColor = getComputedStyle(document.documentElement)
+          .getPropertyValue("--visualizer-wave")
+          .trim();
+        canvasCtx.strokeStyle = waveColor;
+        canvasCtx.beginPath();
+
+        const sliceWidth = width / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * height) / 2;
+
+          if (i === 0) {
+            canvasCtx.moveTo(x, y);
+          } else {
+            canvasCtx.lineTo(x, y);
+          }
+
+          x += sliceWidth;
+        }
+
+        canvasCtx.lineTo(width, height / 2);
+        canvasCtx.stroke();
+      }
+
+      /* --- Live Mic Preview on Idle --- */
+      let previewMicStream = null;
+      let previewContext = null;
+
+      async function setupMicrophoneVisualizerPreview() {
+        if (recordingState !== "inactive") return; // Skip preview logic if recording
+        if (!micToggle.checked) {
+          stopMicrophoneVisualizerPreview();
+          return;
+        }
+
+        try {
+          // If we already have a live previewMicStream, just make sure context and drawing are active
+          if (
+            previewMicStream &&
+            previewMicStream.getAudioTracks().length > 0 &&
+            previewMicStream.getAudioTracks()[0].readyState === "live"
+          ) {
+            if (!previewContext || previewContext.state === "closed") {
+              previewContext = new (
+                window.AudioContext || window.webkitAudioContext
+              )();
+              const previewSource =
+                previewContext.createMediaStreamSource(previewMicStream);
+              analyserNode = previewContext.createAnalyser();
+              analyserNode.fftSize = 1024;
+              previewSource.connect(analyserNode);
+            }
+            visualizerPlaceholder.textContent = "Mic Live";
+            if (visualizerAnimationId)
+              cancelAnimationFrame(visualizerAnimationId);
+            drawWaveform();
+            return;
+          }
+
+          stopMicrophoneVisualizerPreview();
+          if (!micToggle.checked) return;
+
+          previewMicStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+
+          previewContext = new (
+            window.AudioContext || window.webkitAudioContext
+          )();
+          const previewSource =
+            previewContext.createMediaStreamSource(previewMicStream);
+
+          analyserNode = previewContext.createAnalyser();
+          analyserNode.fftSize = 1024;
+
+          previewSource.connect(analyserNode);
+
+          visualizerPlaceholder.textContent = "Mic Live";
+          if (visualizerAnimationId)
+            cancelAnimationFrame(visualizerAnimationId);
+          drawWaveform();
+        } catch (err) {
+          console.warn("Could not start live mic preview:", err);
+          visualizerPlaceholder.textContent = "Mic Disabled";
+        }
+      }
+
+      function stopMicrophoneVisualizerPreview() {
+        if (visualizerAnimationId) cancelAnimationFrame(visualizerAnimationId);
+
+        if (previewMicStream) {
+          previewMicStream.getTracks().forEach((t) => t.stop());
+          previewMicStream = null;
+        }
+
+        if (previewContext && previewContext.state !== "closed") {
+          previewContext.close();
+          previewContext = null;
+        }
+
+        analyserNode = null;
+        visualizerPlaceholder.textContent = "Mic Inactive";
+
+        startIdleVisualizer();
+      }
+
+      // Try setting up mic preview on page load (returns immediately since micToggle is unchecked by default)
+      setupMicrophoneVisualizerPreview();
+
+      /* --- Audio Filter Chain Routing Functions --- */
+      let filterHighpassNode;
+      let filterLowpassNode;
+      let filterGainNode;
+
+      function updateFilters() {
+        if (!audioContext || audioContext.state === "closed") return;
+
+        const hpFreq = parseFloat(highpassSlider.value);
+        const lpFreq = parseFloat(lowpassSlider.value);
+        const gainVal = parseFloat(gainSlider.value);
+
+        if (filterHighpassNode) {
+          filterHighpassNode.frequency.setValueAtTime(
+            hpFreq,
+            audioContext.currentTime,
+          );
+        }
+        if (filterLowpassNode) {
+          filterLowpassNode.frequency.setValueAtTime(
+            lpFreq,
+            audioContext.currentTime,
+          );
+        }
+        if (filterGainNode) {
+          filterGainNode.gain.setValueAtTime(gainVal, audioContext.currentTime);
+        }
+      }
+
+      /* --- Timer Utilities --- */
+      function startTimer() {
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(() => {
+          elapsedTime = Date.now() - startTime;
+          timerDisplay.textContent = formatTime(elapsedTime);
+        }, 100);
+      }
+
+      function pauseTimer() {
+        clearInterval(timerInterval);
+      }
+
+      function stopTimer() {
+        clearInterval(timerInterval);
+        elapsedTime = 0;
+        timerDisplay.textContent = "00:00:00";
+      }
+
+      function formatTime(ms) {
+        const totalSecs = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+      }
+
+      /* --- Recording Engine Logic --- */
+
+      btnStart.addEventListener("click", startRecording);
+      btnPause.addEventListener("click", togglePause);
+      btnStop.addEventListener("click", stopRecording);
+
+      async function startRecording() {
+        recordedChunks = [];
+        elapsedTime = 0;
+        totalPauseDurationUs = 0;
+        pauseStartUs = 0;
+        stopMicrophoneVisualizerPreview(); // Terminate background preview stream first
+
+        const format = formatSelect.value;
+        const fps = parseInt(fpsSelect.value);
+        const quality = qualitySelect.value;
+
+        // Load mp4-muxer module if MP4 and WebCodecs are required
+        const isMp4 = format === "mp4";
+        const useWebCodecs = isMp4 && useWebCodecsForMp4;
+
+        if (useWebCodecs) {
+          statusText.textContent = "Loading Engine...";
+          try {
+            const { Muxer, ArrayBufferTarget } =
+              await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/+esm");
+            window.Mp4Muxer = Muxer;
+            window.Mp4ArrayBufferTarget = ArrayBufferTarget;
+          } catch (cdnErr) {
+            showToast(
+              "Failed to load H.264 MP4 encoder. Fallback to WebM.",
+              "error",
+            );
+            formatSelect.value = "webm";
+            resetAppState();
+            return;
+          }
+        }
+
+        try {
+          // Construct display dimensions constraints
+          const displayConstraints = {
+            video: {
+              frameRate: { ideal: fps, max: 60 },
+            },
+            audio: systemAudioToggle.checked
+              ? { echoCancellation: false }
+              : false,
+          };
+
+          if (quality === "1080p") {
+            displayConstraints.video.width = { ideal: 1920 };
+            displayConstraints.video.height = { ideal: 1080 };
+          } else if (quality === "720p") {
+            displayConstraints.video.width = { ideal: 1280 };
+            displayConstraints.video.height = { ideal: 720 };
+          }
+
+          // Request screen stream
+          videoStream =
+            await navigator.mediaDevices.getDisplayMedia(displayConstraints);
+
+          // Request mic stream if selected
+          if (micToggle.checked) {
+            try {
+              if (
+                previewMicStream &&
+                previewMicStream.getAudioTracks().length > 0 &&
+                previewMicStream.getAudioTracks()[0].readyState === "live"
+              ) {
+                microphoneStream = previewMicStream;
+              } else {
+                microphoneStream = await navigator.mediaDevices.getUserMedia({
+                  audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                  },
+                });
+              }
+            } catch (micErr) {
+              showToast(
+                "Microphone access denied. Recording screen audio only.",
+                "warning",
+              );
+              micToggle.checked = false;
+              filterControls.style.display = "none";
+            }
+          }
+
+          // Route and mix audio tracks if there is any source (Mic or Screen Audio)
+          const systemAudioTracks = videoStream.getAudioTracks();
+          const hasSystemAudio = systemAudioTracks.length > 0;
+          const hasMicAudio =
+            microphoneStream && microphoneStream.getAudioTracks().length > 0;
+
+          if (hasSystemAudio || hasMicAudio) {
+            audioContext = new (
+              window.AudioContext || window.webkitAudioContext
+            )();
+            destinationNode = audioContext.createMediaStreamDestination();
+
+            // Set up microphone node & filter routing
+            if (hasMicAudio) {
+              const micSource =
+                audioContext.createMediaStreamSource(microphoneStream);
+
+              filterHighpassNode = audioContext.createBiquadFilter();
+              filterHighpassNode.type = "highpass";
+
+              filterLowpassNode = audioContext.createBiquadFilter();
+              filterLowpassNode.type = "lowpass";
+
+              filterGainNode = audioContext.createGain();
+
+              updateFilters();
+
+              analyserNode = audioContext.createAnalyser();
+              analyserNode.fftSize = 1024;
+
+              micSource.connect(filterHighpassNode);
+              filterHighpassNode.connect(filterLowpassNode);
+              filterLowpassNode.connect(filterGainNode);
+              filterGainNode.connect(analyserNode);
+              analyserNode.connect(destinationNode);
+            }
+
+            // Route system audio from getDisplayMedia directly to destination mixed output
+            if (hasSystemAudio) {
+              const systemAudioSource =
+                audioContext.createMediaStreamSource(videoStream);
+              systemAudioSource.connect(destinationNode);
+            }
+
+            audioTracks = destinationNode.stream.getAudioTracks();
+          }
+
+          recordingState = "recording";
+
+          if (useWebCodecs) {
+            /* --- WebCodecs MP4 Pipeline --- */
+
+            const videoTrack = videoStream.getVideoTracks()[0];
+            const videoSettings = videoTrack.getSettings();
+
+            // Grab the raw dimensions from the screen/window capture
+            const rawWidth = videoSettings.width || 1280;
+            const rawHeight = videoSettings.height || 720;
+
+            // Force dimensions to be even numbers to satisfy H.264 requirements
+            const encoderWidth = rawWidth % 2 !== 0 ? rawWidth - 1 : rawWidth;
+            const encoderHeight =
+              rawHeight % 2 !== 0 ? rawHeight - 1 : rawHeight;
+
+            // Deduce appropriate bitrates dynamically based on size and fps
+            let videoBitrate = 4_000_000;
+            if (encoderWidth >= 1920) {
+              videoBitrate = fps === 60 ? 6_000_000 : 4_000_000;
+            } else {
+              videoBitrate = fps === 60 ? 3_000_000 : 2_000_000;
+            }
+
+            // Initialize Muxer options
+            const muxerOptions = {
+              target: new window.Mp4ArrayBufferTarget(),
+              video: {
+                codec: "avc",
+                width: encoderWidth,
+                height: encoderHeight,
+              },
+              fastStart: "in-memory",
+              firstTimestampBehavior: "offset",
+            };
+
+            const hasAudio = audioTracks.length > 0;
+            let audioSampleRate = 48000;
+            let audioChannels = 1;
+
+            if (hasAudio) {
+              const audioTrack = audioTracks[0];
+              audioSampleRate = audioTrack.getSettings().sampleRate || 48000;
+              audioChannels = Math.min(
+                2,
+                audioTrack.getSettings().channelCount || 1,
+              );
+
+              muxerOptions.audio = {
+                codec: "aac",
+                numberOfChannels: audioChannels,
+                sampleRate: audioSampleRate,
+              };
+            }
+
+            muxer = new window.Mp4Muxer(muxerOptions);
+
+            // Configure VideoEncoder
+            videoEncoder = new VideoEncoder({
+              output: (chunk, meta) => {
+                muxer.addVideoChunk(chunk, meta);
+              },
+              error: (e) => {
+                console.error("VideoEncoder error:", e);
+                showToast(`Video encoding error: ${e.message}`, "error");
+              },
+            });
+
+            videoEncoder.configure({
+              codec: "avc1.42002a", // High profile
+              width: encoderWidth,
+              height: encoderHeight,
+              bitrate: videoBitrate,
+              framerate: fps,
+              latencyMode: "realtime",
+            });
+
+            // Configure AudioEncoder
+            if (hasAudio) {
+              audioEncoder = new AudioEncoder({
+                output: (chunk, meta) => {
+                  // Reconstruct with timestamp offset to align pause/resume timeline
+                  const adjustedTimestamp =
+                    chunk.timestamp - totalPauseDurationUs;
+                  const dataBuffer = new ArrayBuffer(chunk.byteLength);
+                  chunk.copyTo(dataBuffer);
+
+                  const adjustedChunk = new EncodedAudioChunk({
+                    type: chunk.type,
+                    timestamp: adjustedTimestamp,
+                    duration: chunk.duration,
+                    data: dataBuffer,
+                  });
+
+                  muxer.addAudioChunk(adjustedChunk, meta);
+                },
+                error: (e) => {
+                  console.error("AudioEncoder error:", e);
+                  showToast(`Audio encoding error: ${e.message}`, "error");
+                },
+              });
+
+              audioEncoder.configure({
+                codec: "mp4a.40.2", // AAC Low Complexity
+                numberOfChannels: audioChannels,
+                sampleRate: audioSampleRate,
+                bitrate: 128000,
+              });
+            }
+
+            // Setup display listeners
+            videoTrack.addEventListener("ended", () => {
+              if (
+                recordingState === "recording" ||
+                recordingState === "paused"
+              ) {
+                stopRecording();
+              }
+            });
+
+            // Start visualizer loop
+            if (analyserNode) {
+              visualizerPlaceholder.textContent = "Mic Processing";
+              if (visualizerAnimationId)
+                cancelAnimationFrame(visualizerAnimationId);
+              drawWaveform();
+            } else {
+              visualizerPlaceholder.textContent = "No Audio Source";
+            }
+
+            // Start async capture and encoding streams
+            startTimer();
+            runVideoEncoderLoop(videoTrack);
+            if (hasAudio) {
+              runAudioEncoderLoop(audioTracks[0]);
+            }
+          } else {
+            /* --- MediaRecorder Pipeline (WebM & Safari native MP4) --- */
+            const combinedStreamTracks = [
+              videoStream.getVideoTracks()[0],
+              ...audioTracks,
+            ];
+
+            const combinedStream = new MediaStream(combinedStreamTracks);
+
+            let options = {};
+            if (isMp4 && supportsNativeMp4) {
+              options = { mimeType: "video/mp4;codecs=avc1" };
+            } else {
+              options = { mimeType: "video/webm;codecs=vp9,opus" };
+              if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: "video/webm;codecs=vp8,opus" };
+              }
+              if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: "video/webm" };
+              }
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, options);
+
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) {
+                recordedChunks.push(e.data);
+              }
+            };
+
+            mediaRecorder.onstop = () => {
+              const fileType = isMp4 ? "video/mp4" : "video/webm";
+              const ext = isMp4 ? "mp4" : "webm";
+              const blob = new Blob(recordedChunks, { type: fileType });
+              handleRecordingSaved(blob, ext);
+            };
+
+            videoStream.getVideoTracks()[0].addEventListener("ended", () => {
+              if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                stopRecording();
+              }
+            });
+
+            mediaRecorder.start(1000);
+            startTimer();
+
+            if (analyserNode) {
+              visualizerPlaceholder.textContent = "Mic Processing";
+              if (visualizerAnimationId)
+                cancelAnimationFrame(visualizerAnimationId);
+              drawWaveform();
+            } else {
+              visualizerPlaceholder.textContent = "No Audio Source";
+            }
+          }
+
+          setUIRecordingState(true);
+          showToast(
+            `Recording session started (${format.toUpperCase()}).`,
+            "success",
+          );
+        } catch (err) {
+          console.error("Recording initiation failure:", err);
+          showToast(`Recording failed: ${err.message || err}`, "error");
+          resetAppState();
+        }
+      }
+
+      /* --- Async WebCodecs capture streams loop --- */
+      async function runVideoEncoderLoop(videoTrack) {
+        const trackProcessor = new MediaStreamTrackProcessor({
+          track: videoTrack,
+        });
+        videoReader = trackProcessor.readable.getReader();
+
+        let frameCount = 0;
+
+        try {
+          while (
+            recordingState === "recording" ||
+            recordingState === "paused"
+          ) {
+            const { done, value: frame } = await videoReader.read();
+            if (done) break;
+
+            if (recordingState === "paused") {
+              frame.close();
+              continue;
+            }
+
+            frameCount++;
+            // Force a key frame every 120 frames (2-4 seconds) to ensure seekability
+            const forceKeyframe = frameCount % 120 === 0;
+
+            // Shift timestamp based on paused times
+            const adjustedTimestamp = frame.timestamp - totalPauseDurationUs;
+            const adjustedFrame = new VideoFrame(frame, {
+              timestamp: adjustedTimestamp,
+            });
+
+            videoEncoder.encode(adjustedFrame, { keyFrame: forceKeyframe });
+
+            adjustedFrame.close();
+            frame.close();
+          }
+        } catch (err) {
+          console.error("Video processing thread crashed:", err);
+        } finally {
+          try {
+            videoReader.releaseLock();
+          } catch (e) {}
+        }
+      }
+
+      async function runAudioEncoderLoop(audioTrack) {
+        const trackProcessor = new MediaStreamTrackProcessor({
+          track: audioTrack,
+        });
+        audioReader = trackProcessor.readable.getReader();
+
+        try {
+          while (
+            recordingState === "recording" ||
+            recordingState === "paused"
+          ) {
+            const { done, value: audioData } = await audioReader.read();
+            if (done) break;
+
+            if (recordingState === "paused") {
+              audioData.close();
+              continue;
+            }
+
+            audioEncoder.encode(audioData);
+            audioData.close();
+          }
+        } catch (err) {
+          console.error("Audio processing thread crashed:", err);
+        } finally {
+          try {
+            audioReader.releaseLock();
+          } catch (e) {}
+        }
+      }
+
+      function setUIPausedState(isPaused) {
+        if (isPaused) {
+          btnPause.className = "btn btn-primary";
+          btnPause.style.background = "var(--success)";
+          btnPause.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+            <span>Resume</span>
+          `;
+          statusText.textContent = "Paused";
+          statusIndicator.className = "status-indicator paused";
+        } else {
+          btnPause.className = "btn btn-warning";
+          btnPause.style.background = "";
+          btnPause.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            <span>Pause</span>
+          `;
+          statusText.textContent = "Recording";
+          statusIndicator.className = "status-indicator recording";
+        }
+      }
+
+      function togglePause() {
+        const format = formatSelect.value;
+        const useWebCodecs = format === "mp4" && useWebCodecsForMp4;
+
+        if (useWebCodecs) {
+          if (recordingState === "recording") {
+            recordingState = "paused";
+            pauseTimer();
+            setUIPausedState(true);
+            pauseStartUs = performance.now() * 1000;
+            showToast("Recording paused.", "info");
+          } else if (recordingState === "paused") {
+            recordingState = "recording";
+
+            if (pauseStartUs > 0) {
+              totalPauseDurationUs += performance.now() * 1000 - pauseStartUs;
+              pauseStartUs = 0;
+            }
+
+            startTimer();
+            setUIPausedState(false);
+            showToast("Recording resumed.", "success");
+          }
+        } else {
+          // Standard MediaRecorder toggle
+          if (!mediaRecorder) return;
+
+          if (mediaRecorder.state === "recording") {
+            mediaRecorder.pause();
+            pauseTimer();
+            setUIPausedState(true);
+            showToast("Recording paused.", "info");
+          } else if (mediaRecorder.state === "paused") {
+            mediaRecorder.resume();
+            startTimer();
+            setUIPausedState(false);
+            showToast("Recording resumed.", "success");
+          }
+        }
+      }
+
+      async function stopRecording() {
+        const format = formatSelect.value;
+        const useWebCodecs = format === "mp4" && useWebCodecsForMp4;
+
+        if (useWebCodecs) {
+          if (recordingState === "inactive") return;
+
+          recordingState = "stopped";
+          statusText.textContent = "Finalizing...";
+          showToast("Finalizing MP4 file, please wait...", "info");
+
+          pauseTimer();
+
+          // Cancel reader locks immediately
+          if (videoReader) {
+            try {
+              await videoReader.cancel();
+            } catch (e) {}
+            videoReader = null;
+          }
+          if (audioReader) {
+            try {
+              await audioReader.cancel();
+            } catch (e) {}
+            audioReader = null;
+          }
+
+          // Flush encoders to output remaining chunks
+          if (videoEncoder && videoEncoder.state !== "unconfigured") {
+            try {
+              await videoEncoder.flush();
+            } catch (e) {}
+          }
+          if (audioEncoder && audioEncoder.state !== "unconfigured") {
+            try {
+              await audioEncoder.flush();
+            } catch (e) {}
+          }
+
+          // Finalize MP4 muxer
+          let mp4Blob = null;
+          if (muxer) {
+            try {
+              await muxer.finalize();
+              const buffer = muxer.target.buffer;
+              mp4Blob = new Blob([buffer], { type: "video/mp4" });
+            } catch (muxErr) {
+              console.error("Muxer finalization failure:", muxErr);
+              showToast("Error generating MP4 file.", "error");
+            }
+            muxer = null;
+          }
+
+          // Clean up encoder contexts
+          if (videoEncoder) {
+            try {
+              videoEncoder.close();
+            } catch (e) {}
+            videoEncoder = null;
+          }
+          if (audioEncoder) {
+            try {
+              audioEncoder.close();
+            } catch (e) {}
+            audioEncoder = null;
+          }
+
+          if (mp4Blob) {
+            handleRecordingSaved(mp4Blob, "mp4");
+          } else {
+            resetAppState();
+          }
+        } else {
+          // Native MediaRecorder Stop
+          if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+          mediaRecorder.stop();
+          pauseTimer();
+          showToast("Recording stopped. Saving...", "info");
+        }
+      }
+
+      function handleRecordingSaved(blob, format) {
+        const videoUrl = URL.createObjectURL(blob);
+
+        previewVideo.src = videoUrl;
+        previewModalOverlay.classList.add("active");
+
+        const timeStamp = new Date().toISOString().slice(0, 10);
+        filenameInput.value = `pablo-recording-${timeStamp}`;
+
+        document.getElementById("downloadExtension").textContent = `.${format}`;
+
+        resetAppState();
+      }
+
+      // Cleanup capture tracks, close contexts and reset UI elements
+      function resetAppState() {
+        stopTimer();
+        recordingState = "inactive";
+
+        if (videoStream) {
+          videoStream.getTracks().forEach((track) => track.stop());
+          videoStream = null;
+        }
+
+        if (microphoneStream) {
+          if (!micToggle.checked) {
+            microphoneStream.getTracks().forEach((track) => track.stop());
+            microphoneStream = null;
+            previewMicStream = null;
+          } else {
+            previewMicStream = microphoneStream;
+            microphoneStream = null;
+          }
+        }
+
+        if (audioContext && audioContext.state !== "closed") {
+          audioContext.close();
+          audioContext = null;
+        }
+
+        analyserNode = null;
+        audioTracks = [];
+
+        setUIRecordingState(false);
+        setupMicrophoneVisualizerPreview();
+      }
+
+      function setUIRecordingState(isRecording) {
+        if (isRecording) {
+          btnStart.style.display = "none";
+          recordingControls.style.display = "grid";
+
+          statusText.textContent = "Recording";
+          statusIndicator.className = "status-indicator recording";
+
+          // Lock inputs
+          formatSelect.disabled = true;
+          qualitySelect.disabled = true;
+          fpsSelect.disabled = true;
+          micToggle.disabled = true;
+          systemAudioToggle.disabled = true;
+        } else {
+          btnStart.style.display = "flex";
+          recordingControls.style.display = "none";
+
+          // Reset pause button state
+          setUIPausedState(false);
+
+          statusText.textContent = "Ready";
+          statusIndicator.className = "status-indicator";
+
+          // Unlock inputs
+          formatSelect.disabled = false;
+          qualitySelect.disabled = false;
+          fpsSelect.disabled = false;
+          micToggle.disabled = false;
+          systemAudioToggle.disabled = false;
+        }
+      }
+
+      /* --- Preview Modal Actions --- */
+
+      btnDownload.addEventListener("click", () => {
+        const fileUrl = previewVideo.src;
+        if (!fileUrl) return;
+
+        let filename = filenameInput.value.trim().replace(/[^a-z0-9_-]/gi, "_");
+        if (!filename) filename = "screen-recording";
+
+        const ext = document.getElementById("downloadExtension").textContent;
+
+        const downloadLink = document.createElement("a");
+        downloadLink.style.display = "none";
+        downloadLink.href = fileUrl;
+        downloadLink.download = `${filename}${ext}`;
+
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+
+        setTimeout(() => {
+          document.body.removeChild(downloadLink);
+        }, 100);
+
+        showToast("Recording downloaded successfully!", "success");
+        closePreviewModal();
+      });
+
+      btnDiscard.addEventListener("click", () => {
+        if (confirm("Are you sure you want to discard this recording?")) {
+          closePreviewModal();
+          showToast("Recording discarded.", "info");
+        }
+      });
+
+      function closePreviewModal() {
+        previewModalOverlay.classList.remove("active");
+
+        if (previewVideo.src) {
+          URL.revokeObjectURL(previewVideo.src);
+          previewVideo.src = "";
+        }
+      }
+    </script>
   </body>
 </html>
